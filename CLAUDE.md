@@ -6,9 +6,10 @@ everything over Redfish. Moo-based; released to CPAN via Dist::Zilla `[@Author::
 
 **Phase 1 is built.** Everything that reads has run against an iDRAC 7 (PowerEdge R720xd,
 firmware 2.65) and an iDRAC 8 (PowerEdge T330, firmware 2.50), from recordings and live;
-what they answered is in section 9 of the spec. **Nothing that switches has run against
-hardware**: both machines are in production, so step 4 of plan task 13 is open and stays
-the maintainer's alone. The design is
+what they answered is in section 9 of the spec. **What switches has run against the
+iDRAC 7 only**, on 2026-10-06 with the maintainer's leave: `clear_sel`, gentle `off`,
+`on` and `manager->restart`. The forced forms and everything that switches on an
+iDRAC 8 have not run against hardware. The design is
 `docs/superpowers/specs/2026-10-04-www-idrac-design.md`, the plan
 `docs/superpowers/plans/2026-10-04-www-idrac-phase-1.md`. Phase 2 (a second transport for
 what Redfish lacks on iDRAC 7/8), the async twin `Net::Async::iDRAC` and phase 3

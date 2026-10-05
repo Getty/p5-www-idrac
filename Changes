@@ -23,7 +23,9 @@ Revision history for WWW-iDRAC
       keeps the kinds of document the tests read and cleans those, as far as
       it can tell, of what names the machine, its network or a person
     - Everything that reads has run against an iDRAC 7 (PowerEdge R720xd,
-      firmware 2.65) and an iDRAC 8 (PowerEdge T330, firmware 2.50); the
-      methods that switch something have not been run against hardware yet
+      firmware 2.65) and an iDRAC 8 (PowerEdge T330, firmware 2.50); of the
+      methods that switch something, clear_sel, gentle off, on and the
+      restart of the controller have run against the iDRAC 7, the forced
+      forms and all switching on an iDRAC 8 have not
     - Live tests against a real iDRAC behind IDRAC_HOST, read-only unless
       IDRAC_LIVE_DESTRUCTIVE is set

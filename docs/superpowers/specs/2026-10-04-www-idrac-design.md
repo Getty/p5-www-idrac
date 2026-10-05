@@ -329,6 +329,24 @@ Stand nach der Messung: Die Reset-Typen stimmen für den T330 und nicht für den
 liefern die Messwerte direkt, der Service-Root antwortet ohne Redirect. Die Zeilen zu 409
 und 503 sind ungeprüft, weil nichts geschaltet wurde.
 
+**Schaltender Lauf am 2026-10-06 gegen den R720xd (iDRAC 7, 2.65), mit Gettys Freigabe.**
+`clear_sel`, sanftes `off`, `on` und `manager->restart` sind durchgelaufen. Gemessen:
+
+- Nach `clear_sel` beantwortet der iDRAC 7 jedes Lesen des Event-Logs etwa eine Minute
+  lang mit 500 („Failed to get SEL count“), solange er löscht; IPMI meldet in der Zeit
+  0x81. Die Live-Suite wartet das jetzt ab.
+- Sanftes `off` war nach rund 35 Sekunden erreicht, `on` sofort; der Controller war nach
+  seinem Neustart nach etwa drei Minuten wieder da.
+- Eine Anmeldung, die der hochfahrende Controller noch annimmt, deren Antwort aber nicht
+  mehr ankommt, bleibt als offene Sitzung auf dem Gerät, bis sie abläuft.
+- Der Server kam danach nicht von selbst hoch: Mit nur einem versorgten Netzteil hält das
+  BIOS beim Kaltstart mit „Power required exceeds PSU wattage … F1 to continue“ an
+  (`ErrPrompt=Enabled`). Das ist Sache der Maschine, nicht der Bibliothek, gehört aber vor
+  jeden schaltenden Lauf geprüft.
+
+Nicht gelaufen: die harten Formen (`off( force => 1 )`, `restart( force => 1 )`) und alles
+Schaltende auf dem iDRAC 8.
+
 Der Review des gebauten Stands hat aus Dells Dokumentation Vermutungen über iDRAC 7/8 mit
 Firmware 2.x genannt. Sie sind nicht gemessen und nicht umgesetzt; Karte 1 prüft sie an
 den Aufnahmen.

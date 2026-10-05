@@ -121,7 +121,9 @@ sub clear_sel {
 
 =method clear_sel
 
-Empties the system event log.
+Empties the system event log. The order is taken at once and carried out
+after it: an iDRAC 7 answers every read of the log with an error while it
+erases it, for about a minute.
 
 =method clear_action
 

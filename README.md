@@ -39,9 +39,10 @@ Everything goes over Redfish in this version. What a controller offers depends o
 generation, firmware and license; a method it cannot serve throws
 `WWW::iDRAC::Error::Unsupported` before anything is sent. Everything that reads has
 run against an iDRAC 7 (PowerEdge R720xd, firmware 2.65) and an iDRAC 8 (PowerEdge T330,
-firmware 2.50). **The methods that switch something have not been run against hardware
-yet.** Neither of the two offers a power cycle; the T330 offers no gentle `off`, the
-R720xd no gentle `restart`.
+firmware 2.50). Of the methods that switch something, `clear_sel`, gentle `off`, `on`
+and `manager->restart` have run against the iDRAC 7; **the forced forms, and all
+switching on an iDRAC 8, have not been run against hardware yet.** Neither of the two
+offers a power cycle; the T330 offers no gentle `off`, the R720xd no gentle `restart`.
 
 ## Certificates
 

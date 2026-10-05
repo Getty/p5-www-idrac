@@ -107,9 +107,18 @@ subtest 'changing things' => sub {
     unless ( $ENV{IDRAC_LIVE_DESTRUCTIVE} // '' ) eq '1';
 
   SKIP: {
-    skip 'logs.clear_sel is not on this controller', 2 unless $cap->supports('logs.clear_sel');
+    skip 'logs.clear_sel is not on this controller', 3 unless $cap->supports('logs.clear_sel');
     is( $idrac->logs->clear_sel, 1, 'clear_sel' );
-    cmp_ok( scalar @{ $idrac->logs->sel }, '<=', 2, 'the event log is empty, but for what the clearing itself logs' );
+    # an iDRAC 7 answers every read of the log with an error while it erases it,
+    # for about a minute
+    my $sel;
+    for ( 1 .. 30 ) {
+      last if $sel = eval { $idrac->logs->sel };
+      sleep( $ENV{IDRAC_LIVE_PAUSE} // 10 );
+    }
+    ok( $sel, 'the event log can be read again' ) or diag $@;
+    skip 'the event log did not come back', 1 unless $sel;
+    cmp_ok( scalar @$sel, '<=', 2, 'the event log is empty, but for what the clearing itself logs' );
   }
 
   SKIP: {
