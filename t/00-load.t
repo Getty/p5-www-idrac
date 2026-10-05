@@ -11,7 +11,10 @@ for (qw(
   WWW::iDRAC::Error::Unsupported
   WWW::iDRAC::Error::Validation
   WWW::iDRAC::Redfish
+  WWW::iDRAC::Role::Capability
   WWW::iDRAC::Role::HTTP
+  WWW::iDRAC::System
+  WWW::iDRAC::Util
 )) {
   use_ok($_);
 }
