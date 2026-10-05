@@ -1,0 +1,2667 @@
+{
+   "/redfish/v1" : {
+      "@odata.context" : "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
+      "@odata.id" : "/redfish/v1",
+      "@odata.type" : "#ServiceRoot.v1_0_2.ServiceRoot",
+      "AccountService" : {
+         "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/AccountService"
+      },
+      "Chassis" : {
+         "@odata.id" : "/redfish/v1/Chassis"
+      },
+      "Description" : "user-1 Service",
+      "EventService" : {
+         "@odata.id" : "/redfish/v1/EventService"
+      },
+      "Id" : "RootService",
+      "JsonSchemas" : {
+         "@odata.id" : "/redfish/v1/JSONSchemas"
+      },
+      "Links" : {
+         "Sessions" : {
+            "@odata.id" : "/redfish/v1/Sessions"
+         }
+      },
+      "Managers" : {
+         "@odata.id" : "/redfish/v1/Managers"
+      },
+      "Name" : "user-1 Service",
+      "RedfishVersion" : "1.0.2",
+      "Registries" : {
+         "@odata.id" : "/redfish/v1/Registries"
+      },
+      "SessionService" : {
+         "@odata.id" : "/redfish/v1/SessionService"
+      },
+      "Systems" : {
+         "@odata.id" : "/redfish/v1/Systems"
+      },
+      "Tasks" : {
+         "@odata.id" : "/redfish/v1/TaskService"
+      }
+   },
+   "/redfish/v1/Chassis" : {
+      "@odata.context" : "/redfish/v1/$metadata#ChassisCollection.ChassisCollection",
+      "@odata.id" : "/redfish/v1/Chassis/",
+      "@odata.type" : "#ChassisCollection.ChassisCollection",
+      "Description" : "Collection of Chassis",
+      "Members" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+         }
+      ],
+      "Members@odata.count" : 1,
+      "Name" : "Chassis Collection"
+   },
+   "/redfish/v1/Chassis/System.Embedded.1" : {
+      "@odata.context" : "/redfish/v1/$metadata#Chassis.Chassis",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1",
+      "@odata.type" : "#Chassis.v1_0_2.Chassis",
+      "Actions" : {
+         "#Chassis.Reset" : {
+            "ResetType@Redfish.AllowableValues" : [
+               "On",
+               "ForceOff"
+            ],
+            "Target" : "/redfish/v1/Chassis/System.Embedded.1/Actions/Chassis.Reset"
+         }
+      },
+      "AssetTag" : "",
+      "ChassisType" : "StandAlone",
+      "Description" : "It represents the properties for physical components for any system.It represent racks, rackmount servers, blades, standalone, modular systems,enclosures, and all other containers.The non-cpu/device centric parts of the schema are all accessed either directly or indirectly through this resource.",
+      "Id" : "System.Embedded.1",
+      "IndicatorLED" : "Blinking",
+      "Links" : {
+         "ComputerSystems" : [
+            {
+               "@odata.id" : "/redfish/v1/Systems/System.Embedded.1"
+            }
+         ],
+         "ComputerSystems@odata.count" : 1,
+         "Contains" : [],
+         "Contains@odata.count" : 0,
+         "CooledBy" : [
+            {
+               "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17||Fan.Embedded.Sys 1"
+            }
+         ],
+         "CooledBy@odata.count" : 1,
+         "ManagedBy" : [
+            {
+               "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1"
+            }
+         ],
+         "ManagedBy@odata.count" : 1,
+         "PoweredBy" : [
+            {
+               "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Power/PowerSupplies/PSU.Slot.1"
+            }
+         ],
+         "PoweredBy@odata.count" : 1
+      },
+      "Manufacturer" : "Dell Inc.",
+      "Model" : "PowerEdge T330",
+      "Name" : "Computer System Chassis",
+      "PartNumber" : "06FW8MA01",
+      "Power" : {
+         "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Power"
+      },
+      "PowerState" : "On",
+      "SKU" : "TAG0001",
+      "SerialNumber" : "SERIAL0001",
+      "Status" : {
+         "Health" : "OK",
+         "HealthRollup" : "OK",
+         "State" : "Enabled"
+      },
+      "Thermal" : {
+         "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Thermal"
+      }
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Power" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Power",
+      "@odata.type" : "#Power.v1_0_2.Power",
+      "Description" : "Power",
+      "Id" : "Power",
+      "Name" : "Power",
+      "PowerControl" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Power/PowerControl",
+            "MemberId" : "PowerControl",
+            "Name" : "System Power Control",
+            "PowerAllocatedWatts" : 495,
+            "PowerAvailableWatts" : 0,
+            "PowerCapacityWatts" : 644,
+            "PowerConsumedWatts" : 88,
+            "PowerLimit" : {},
+            "PowerMetrics" : {
+               "AverageConsumedWatts" : 89,
+               "IntervalInMin" : 60,
+               "MaxConsumedWatts" : 111,
+               "MinConsumedWatts" : 83
+            },
+            "PowerRequestedWatts" : 328,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+               },
+               {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 2
+         }
+      ],
+      "PowerControl@odata.count" : 1,
+      "PowerSupplies" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Power/PowerSupplies/PSU.Slot.1",
+            "FirmwareVersion" : "00.1B.53",
+            "LastPowerOutputWatts" : 495,
+            "LineInputVoltage" : 240,
+            "LineInputVoltageType" : "ACMidLine",
+            "MemberId" : "PSU.Slot.1",
+            "Model" : "PWR SPLY,495W,RDNT,ARTESYN    ",
+            "Name" : "PS1 Status",
+            "PartNumber" : "0VKDD2A01",
+            "PowerCapacityWatts" : 495,
+            "PowerSupplyType" : "AC",
+            "Redundancy" : [
+               {
+                  "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Power/Redundancy/iDRAC.Embedded.1%23SystemBoardPSRedundancy",
+                  "MaxNumSupported" : 4,
+                  "MemberId" : "iDRAC.Embedded.1#SystemBoardPSRedundancy",
+                  "MinNumNeeded" : 2,
+                  "Mode" : [
+                     {
+                        "Member" : "N+1"
+                     }
+                  ],
+                  "Name" : "System Board PS Redundancy",
+                  "RedundancySet" : [],
+                  "RedundancySet@odata.count" : 0,
+                  "Status" : {
+                     "Health" : "OK",
+                     "State" : "Disabled"
+                  }
+               }
+            ],
+            "Redundancy@odata.count" : 1,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SerialNumber" : "SERIAL0002",
+            "SparePartNumber" : "0VKDD2A01",
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            }
+         }
+      ],
+      "PowerSupplies@odata.count" : 1,
+      "Redundancy" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Power/Redundancy/iDRAC.Embedded.1%23SystemBoardPSRedundancy",
+            "MaxNumSupported" : 4,
+            "MemberId" : "iDRAC.Embedded.1#SystemBoardPSRedundancy",
+            "MinNumNeeded" : 2,
+            "Mode" : [
+               {
+                  "Member" : "N+1"
+               }
+            ],
+            "Name" : "System Board PS Redundancy",
+            "RedundancySet" : [],
+            "RedundancySet@odata.count" : 0,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Disabled"
+            }
+         }
+      ],
+      "Redundancy@odata.count" : 1,
+      "Voltages" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1MEMVTTPG",
+            "LowerThresholdCritical" : null,
+            "LowerThresholdFatal" : null,
+            "LowerThresholdNonCritical" : null,
+            "MaxReadingRange" : 0,
+            "MemberId" : "iDRAC.Embedded.1#CPU1MEMVTTPG",
+            "MinReadingRange" : 0,
+            "Name" : "CPU1 MEM VTT PG",
+            "PhysicalContext" : "CPU",
+            "ReadingVolts" : 1,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 20,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         },
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoard3.3VPG",
+            "LowerThresholdCritical" : null,
+            "LowerThresholdFatal" : null,
+            "LowerThresholdNonCritical" : null,
+            "MaxReadingRange" : 116,
+            "MemberId" : "iDRAC.Embedded.1#SystemBoard3.3VPG",
+            "MinReadingRange" : 115,
+            "Name" : "System Board 3.3V PG",
+            "PhysicalContext" : "SystemBoard",
+            "ReadingVolts" : 1,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 25,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         },
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoard5VPG",
+            "LowerThresholdCritical" : null,
+            "LowerThresholdFatal" : null,
+            "LowerThresholdNonCritical" : null,
+            "MaxReadingRange" : 0,
+            "MemberId" : "iDRAC.Embedded.1#SystemBoard5VPG",
+            "MinReadingRange" : 0,
+            "Name" : "System Board 5V PG",
+            "PhysicalContext" : "SystemBoard",
+            "ReadingVolts" : 1,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 26,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         },
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1VRPVDDQMEMPG",
+            "LowerThresholdCritical" : null,
+            "LowerThresholdFatal" : null,
+            "LowerThresholdNonCritical" : null,
+            "MaxReadingRange" : 0,
+            "MemberId" : "iDRAC.Embedded.1#CPU1VRPVDDQMEMPG",
+            "MinReadingRange" : 0,
+            "Name" : "CPU1 VR PVDDQ MEM PG",
+            "PhysicalContext" : "CPU",
+            "ReadingVolts" : 1,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 30,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         },
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1VRPVPPMEMPG",
+            "LowerThresholdCritical" : null,
+            "LowerThresholdFatal" : null,
+            "LowerThresholdNonCritical" : null,
+            "MaxReadingRange" : 116,
+            "MemberId" : "iDRAC.Embedded.1#CPU1VRPVPPMEMPG",
+            "MinReadingRange" : 115,
+            "Name" : "CPU1 VR PVPP MEM PG",
+            "PhysicalContext" : "CPU",
+            "ReadingVolts" : 1,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 31,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         },
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1VRPVCORECPUPG",
+            "LowerThresholdCritical" : null,
+            "LowerThresholdFatal" : null,
+            "LowerThresholdNonCritical" : null,
+            "MaxReadingRange" : 0,
+            "MemberId" : "iDRAC.Embedded.1#CPU1VRPVCORECPUPG",
+            "MinReadingRange" : 0,
+            "Name" : "CPU1 VR PVCORE CPU PG",
+            "PhysicalContext" : "CPU",
+            "ReadingVolts" : 1,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 35,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         },
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardVRP1V5AUXPG",
+            "LowerThresholdCritical" : null,
+            "LowerThresholdFatal" : null,
+            "LowerThresholdNonCritical" : null,
+            "MaxReadingRange" : 116,
+            "MemberId" : "iDRAC.Embedded.1#SystemBoardVRP1V5AUXPG",
+            "MinReadingRange" : 115,
+            "Name" : "System Board VR P1V5 AUX PG",
+            "PhysicalContext" : "SystemBoard",
+            "ReadingVolts" : 1,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 40,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         },
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardPS1PGFail",
+            "LowerThresholdCritical" : null,
+            "LowerThresholdFatal" : null,
+            "LowerThresholdNonCritical" : null,
+            "MaxReadingRange" : 0,
+            "MemberId" : "iDRAC.Embedded.1#SystemBoardPS1PGFail",
+            "MinReadingRange" : 0,
+            "Name" : "System Board PS1 PG Fail",
+            "PhysicalContext" : "SystemBoard",
+            "ReadingVolts" : 1,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 45,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         },
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardPS2PGFail",
+            "LowerThresholdCritical" : null,
+            "LowerThresholdFatal" : null,
+            "LowerThresholdNonCritical" : null,
+            "MaxReadingRange" : 0,
+            "MemberId" : "iDRAC.Embedded.1#SystemBoardPS2PGFail",
+            "MinReadingRange" : 0,
+            "Name" : "System Board PS2 PG Fail",
+            "PhysicalContext" : "SystemBoard",
+            "ReadingVolts" : 1,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 44,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         },
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1VCCIOPG",
+            "LowerThresholdCritical" : null,
+            "LowerThresholdFatal" : null,
+            "LowerThresholdNonCritical" : null,
+            "MaxReadingRange" : 116,
+            "MemberId" : "iDRAC.Embedded.1#CPU1VCCIOPG",
+            "MinReadingRange" : 115,
+            "Name" : "CPU1 VCCIO PG",
+            "PhysicalContext" : "CPU",
+            "ReadingVolts" : 1,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 43,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         },
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23PS1Voltage",
+            "LowerThresholdCritical" : null,
+            "LowerThresholdFatal" : null,
+            "LowerThresholdNonCritical" : null,
+            "MaxReadingRange" : 0,
+            "MemberId" : "iDRAC.Embedded.1#PS1Voltage",
+            "MinReadingRange" : 0,
+            "Name" : "PS1 Voltage 1",
+            "PhysicalContext" : "PowerSupply",
+            "ReadingVolts" : 240.0,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Power/PowerSupplies/PSU.Slot.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 108,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         },
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardBP15VPG",
+            "LowerThresholdCritical" : null,
+            "LowerThresholdFatal" : null,
+            "LowerThresholdNonCritical" : null,
+            "MaxReadingRange" : 0,
+            "MemberId" : "iDRAC.Embedded.1#SystemBoardBP15VPG",
+            "MinReadingRange" : 0,
+            "Name" : "System Board BP1 5V PG",
+            "PhysicalContext" : "SystemBoard",
+            "ReadingVolts" : 1,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 246,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         },
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1CPUVSAPG",
+            "LowerThresholdCritical" : null,
+            "LowerThresholdFatal" : null,
+            "LowerThresholdNonCritical" : null,
+            "MaxReadingRange" : 0,
+            "MemberId" : "iDRAC.Embedded.1#CPU1CPUVSAPG",
+            "MinReadingRange" : 0,
+            "Name" : "CPU1 CPU VSA PG",
+            "PhysicalContext" : "CPU",
+            "ReadingVolts" : 1,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 32,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         },
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardP1V0PRIMEPG",
+            "LowerThresholdCritical" : null,
+            "LowerThresholdFatal" : null,
+            "LowerThresholdNonCritical" : null,
+            "MaxReadingRange" : 116,
+            "MemberId" : "iDRAC.Embedded.1#SystemBoardP1V0PRIMEPG",
+            "MinReadingRange" : 115,
+            "Name" : "System Board P1V0 PRIME PG",
+            "PhysicalContext" : "SystemBoard",
+            "ReadingVolts" : 1,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 39,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         }
+      ],
+      "Voltages@odata.count" : 14
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Power/PowerControl" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Power/PowerControl",
+      "@odata.type" : "#Power.v1_0_2.PowerControl",
+      "MemberId" : "PowerControl",
+      "Name" : "System Power Control",
+      "PowerAllocatedWatts" : 495,
+      "PowerAvailableWatts" : 0,
+      "PowerCapacityWatts" : 644,
+      "PowerConsumedWatts" : 87,
+      "PowerLimit" : {},
+      "PowerMetrics" : {
+         "AverageConsumedWatts" : 89,
+         "IntervalInMin" : 60,
+         "MaxConsumedWatts" : 111,
+         "MinConsumedWatts" : 83
+      },
+      "PowerRequestedWatts" : 328,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Systems/System.Embedded.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 2
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Power/PowerSupplies/PSU.Slot.1" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Power/PowerSupplies/PSU.Slot.1",
+      "@odata.type" : "#Power.v1_0_2.PowerSupply",
+      "FirmwareVersion" : "00.1B.53",
+      "LastPowerOutputWatts" : 495,
+      "LineInputVoltage" : 240,
+      "LineInputVoltageType" : "ACMidLine",
+      "MemberId" : "PSU.Slot.1",
+      "Model" : "PWR SPLY,495W,RDNT,ARTESYN    ",
+      "Name" : "PS1 Status",
+      "PartNumber" : "0VKDD2A01",
+      "PowerCapacityWatts" : 495,
+      "PowerSupplyType" : "AC",
+      "Redundancy" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Power/Redundancy/iDRAC.Embedded.1%23SystemBoardPSRedundancy",
+            "MaxNumSupported" : 4,
+            "MemberId" : "iDRAC.Embedded.1#SystemBoardPSRedundancy",
+            "MinNumNeeded" : 2,
+            "Mode" : [
+               {
+                  "Member" : "N+1"
+               }
+            ],
+            "Name" : "System Board PS Redundancy",
+            "RedundancySet" : [],
+            "RedundancySet@odata.count" : 0,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Disabled"
+            }
+         }
+      ],
+      "Redundancy@odata.count" : 1,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SerialNumber" : "SERIAL0002",
+      "SparePartNumber" : "0VKDD2A01",
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      }
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17||Fan.Embedded.Sys 1" : {
+      "@odata.context" : "/redfish/v1/$metadata#Thermal.Thermal",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17||Fan.Embedded.Sys 1",
+      "@odata.type" : "#Thermal.v1_0_2.Fan",
+      "FanName" : "System Board Sys Fan1",
+      "LowerThresholdCritical" : 240,
+      "LowerThresholdFatal" : 240,
+      "LowerThresholdNonCritical" : 360,
+      "MaxReadingRange" : 197,
+      "MemberId" : "0x17||Fan.Embedded.Sys 1",
+      "MinReadingRange" : 139,
+      "PhysicalContext" : "SystemBoard",
+      "Reading" : 1800,
+      "ReadingUnits" : "RPM",
+      "Redundancy" : [],
+      "Redundancy@odata.count" : 0,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Temperatures/iDRAC.Embedded.1%23CPU1Temp" : {
+      "@odata.context" : "/redfish/v1/$metadata#Thermal.Thermal",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Temperatures/iDRAC.Embedded.1%23CPU1Temp",
+      "@odata.type" : "#Thermal.v1_0_2.Temperature",
+      "LowerThresholdCritical" : 3,
+      "LowerThresholdFatal" : 3,
+      "LowerThresholdNonCritical" : 8,
+      "MaxReadingRangeTemp" : 19,
+      "MemberId" : "iDRAC.Embedded.1#CPU1Temp",
+      "MinReadingRangeTemp" : 13,
+      "Name" : "CPU1 Temp",
+      "PhysicalContext" : "CPU",
+      "ReadingCelsius" : 40,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 14,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : 100,
+      "UpperThresholdFatal" : 100,
+      "UpperThresholdNonCritical" : 95
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Temperatures/iDRAC.Embedded.1%23SystemBoardInletTemp" : {
+      "@odata.context" : "/redfish/v1/$metadata#Thermal.Thermal",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Temperatures/iDRAC.Embedded.1%23SystemBoardInletTemp",
+      "@odata.type" : "#Thermal.v1_0_2.Temperature",
+      "LowerThresholdCritical" : -7,
+      "LowerThresholdFatal" : -7,
+      "LowerThresholdNonCritical" : 3,
+      "MaxReadingRangeTemp" : 19,
+      "MemberId" : "iDRAC.Embedded.1#SystemBoardInletTemp",
+      "MinReadingRangeTemp" : 13,
+      "Name" : "System Board Inlet Temp",
+      "PhysicalContext" : "Intake",
+      "ReadingCelsius" : 21,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 4,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : 47,
+      "UpperThresholdFatal" : 47,
+      "UpperThresholdNonCritical" : 42
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1CPUVSAPG" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1CPUVSAPG",
+      "@odata.type" : "#Power.v1_0_2.Voltage",
+      "LowerThresholdCritical" : null,
+      "LowerThresholdFatal" : null,
+      "LowerThresholdNonCritical" : null,
+      "MaxReadingRange" : 0,
+      "MemberId" : "iDRAC.Embedded.1#CPU1CPUVSAPG",
+      "MinReadingRange" : 0,
+      "Name" : "CPU1 CPU VSA PG",
+      "PhysicalContext" : "CPU",
+      "ReadingVolts" : 1,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 32,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1MEMVTTPG" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1MEMVTTPG",
+      "@odata.type" : "#Power.v1_0_2.Voltage",
+      "LowerThresholdCritical" : null,
+      "LowerThresholdFatal" : null,
+      "LowerThresholdNonCritical" : null,
+      "MaxReadingRange" : 0,
+      "MemberId" : "iDRAC.Embedded.1#CPU1MEMVTTPG",
+      "MinReadingRange" : 0,
+      "Name" : "CPU1 MEM VTT PG",
+      "PhysicalContext" : "CPU",
+      "ReadingVolts" : 1,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 20,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1VCCIOPG" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1VCCIOPG",
+      "@odata.type" : "#Power.v1_0_2.Voltage",
+      "LowerThresholdCritical" : null,
+      "LowerThresholdFatal" : null,
+      "LowerThresholdNonCritical" : null,
+      "MaxReadingRange" : 172,
+      "MemberId" : "iDRAC.Embedded.1#CPU1VCCIOPG",
+      "MinReadingRange" : 39,
+      "Name" : "CPU1 VCCIO PG",
+      "PhysicalContext" : "CPU",
+      "ReadingVolts" : 1,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 43,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1VRPVCORECPUPG" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1VRPVCORECPUPG",
+      "@odata.type" : "#Power.v1_0_2.Voltage",
+      "LowerThresholdCritical" : null,
+      "LowerThresholdFatal" : null,
+      "LowerThresholdNonCritical" : null,
+      "MaxReadingRange" : 97,
+      "MemberId" : "iDRAC.Embedded.1#CPU1VRPVCORECPUPG",
+      "MinReadingRange" : 111,
+      "Name" : "CPU1 VR PVCORE CPU PG",
+      "PhysicalContext" : "CPU",
+      "ReadingVolts" : 1,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 35,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1VRPVDDQMEMPG" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1VRPVDDQMEMPG",
+      "@odata.type" : "#Power.v1_0_2.Voltage",
+      "LowerThresholdCritical" : null,
+      "LowerThresholdFatal" : null,
+      "LowerThresholdNonCritical" : null,
+      "MaxReadingRange" : 0,
+      "MemberId" : "iDRAC.Embedded.1#CPU1VRPVDDQMEMPG",
+      "MinReadingRange" : 0,
+      "Name" : "CPU1 VR PVDDQ MEM PG",
+      "PhysicalContext" : "CPU",
+      "ReadingVolts" : 1,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 30,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1VRPVPPMEMPG" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23CPU1VRPVPPMEMPG",
+      "@odata.type" : "#Power.v1_0_2.Voltage",
+      "LowerThresholdCritical" : null,
+      "LowerThresholdFatal" : null,
+      "LowerThresholdNonCritical" : null,
+      "MaxReadingRange" : 0,
+      "MemberId" : "iDRAC.Embedded.1#CPU1VRPVPPMEMPG",
+      "MinReadingRange" : 0,
+      "Name" : "CPU1 VR PVPP MEM PG",
+      "PhysicalContext" : "CPU",
+      "ReadingVolts" : 1,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 31,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23PS1Voltage" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23PS1Voltage",
+      "@odata.type" : "#Power.v1_0_2.Voltage",
+      "LowerThresholdCritical" : null,
+      "LowerThresholdFatal" : null,
+      "LowerThresholdNonCritical" : null,
+      "MaxReadingRange" : 0,
+      "MemberId" : "iDRAC.Embedded.1#PS1Voltage",
+      "MinReadingRange" : 0,
+      "Name" : "PS1 Voltage 1",
+      "PhysicalContext" : "PowerSupply",
+      "ReadingVolts" : 240.0,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Power/PowerSupplies/PSU.Slot.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 108,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoard3.3VPG" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoard3.3VPG",
+      "@odata.type" : "#Power.v1_0_2.Voltage",
+      "LowerThresholdCritical" : null,
+      "LowerThresholdFatal" : null,
+      "LowerThresholdNonCritical" : null,
+      "MaxReadingRange" : 0,
+      "MemberId" : "iDRAC.Embedded.1#SystemBoard3.3VPG",
+      "MinReadingRange" : 0,
+      "Name" : "System Board 3.3V PG",
+      "PhysicalContext" : "SystemBoard",
+      "ReadingVolts" : 1,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 25,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoard5VPG" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoard5VPG",
+      "@odata.type" : "#Power.v1_0_2.Voltage",
+      "LowerThresholdCritical" : null,
+      "LowerThresholdFatal" : null,
+      "LowerThresholdNonCritical" : null,
+      "MaxReadingRange" : 0,
+      "MemberId" : "iDRAC.Embedded.1#SystemBoard5VPG",
+      "MinReadingRange" : 0,
+      "Name" : "System Board 5V PG",
+      "PhysicalContext" : "SystemBoard",
+      "ReadingVolts" : 1,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 26,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardBP15VPG" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardBP15VPG",
+      "@odata.type" : "#Power.v1_0_2.Voltage",
+      "LowerThresholdCritical" : null,
+      "LowerThresholdFatal" : null,
+      "LowerThresholdNonCritical" : null,
+      "MaxReadingRange" : 0,
+      "MemberId" : "iDRAC.Embedded.1#SystemBoardBP15VPG",
+      "MinReadingRange" : 0,
+      "Name" : "System Board BP1 5V PG",
+      "PhysicalContext" : "SystemBoard",
+      "ReadingVolts" : 1,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 246,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardP1V0PRIMEPG" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardP1V0PRIMEPG",
+      "@odata.type" : "#Power.v1_0_2.Voltage",
+      "LowerThresholdCritical" : null,
+      "LowerThresholdFatal" : null,
+      "LowerThresholdNonCritical" : null,
+      "MaxReadingRange" : 0,
+      "MemberId" : "iDRAC.Embedded.1#SystemBoardP1V0PRIMEPG",
+      "MinReadingRange" : 0,
+      "Name" : "System Board P1V0 PRIME PG",
+      "PhysicalContext" : "SystemBoard",
+      "ReadingVolts" : 1,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 39,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardPS1PGFail" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardPS1PGFail",
+      "@odata.type" : "#Power.v1_0_2.Voltage",
+      "LowerThresholdCritical" : null,
+      "LowerThresholdFatal" : null,
+      "LowerThresholdNonCritical" : null,
+      "MaxReadingRange" : 197,
+      "MemberId" : "iDRAC.Embedded.1#SystemBoardPS1PGFail",
+      "MinReadingRange" : 139,
+      "Name" : "System Board PS1 PG Fail",
+      "PhysicalContext" : "SystemBoard",
+      "ReadingVolts" : 1,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 45,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardPS2PGFail" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardPS2PGFail",
+      "@odata.type" : "#Power.v1_0_2.Voltage",
+      "LowerThresholdCritical" : null,
+      "LowerThresholdFatal" : null,
+      "LowerThresholdNonCritical" : null,
+      "MaxReadingRange" : 0,
+      "MemberId" : "iDRAC.Embedded.1#SystemBoardPS2PGFail",
+      "MinReadingRange" : 0,
+      "Name" : "System Board PS2 PG Fail",
+      "PhysicalContext" : "SystemBoard",
+      "ReadingVolts" : 1,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 44,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardVRP1V5AUXPG" : {
+      "@odata.context" : "/redfish/v1/$metadata#Power.Power",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardVRP1V5AUXPG",
+      "@odata.type" : "#Power.v1_0_2.Voltage",
+      "LowerThresholdCritical" : null,
+      "LowerThresholdFatal" : null,
+      "LowerThresholdNonCritical" : null,
+      "MaxReadingRange" : 197,
+      "MemberId" : "iDRAC.Embedded.1#SystemBoardVRP1V5AUXPG",
+      "MinReadingRange" : 139,
+      "Name" : "System Board VR P1V5 AUX PG",
+      "PhysicalContext" : "SystemBoard",
+      "ReadingVolts" : 1,
+      "RelatedItem" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+         }
+      ],
+      "RelatedItem@odata.count" : 1,
+      "SensorNumber" : 40,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UpperThresholdCritical" : null,
+      "UpperThresholdFatal" : null,
+      "UpperThresholdNonCritical" : null
+   },
+   "/redfish/v1/Chassis/System.Embedded.1/Thermal" : {
+      "@odata.context" : "/redfish/v1/$metadata#Thermal.Thermal",
+      "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Thermal",
+      "@odata.type" : "#Thermal.v1_0_2.Thermal",
+      "Description" : "Represents the properties for Temperature and Cooling",
+      "Fans" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17||Fan.Embedded.Sys 1",
+            "FanName" : "System Board Sys Fan1",
+            "LowerThresholdCritical" : 240,
+            "LowerThresholdFatal" : 240,
+            "LowerThresholdNonCritical" : 360,
+            "MaxReadingRange" : 197,
+            "MemberId" : "0x17||Fan.Embedded.Sys 1",
+            "MinReadingRange" : 139,
+            "PhysicalContext" : "SystemBoard",
+            "Reading" : 1800,
+            "ReadingUnits" : "RPM",
+            "Redundancy" : [],
+            "Redundancy@odata.count" : 0,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : null,
+            "UpperThresholdFatal" : null,
+            "UpperThresholdNonCritical" : null
+         }
+      ],
+      "Fans@odata.count" : 1,
+      "Id" : "Thermal",
+      "Name" : "Thermal",
+      "Redundancy" : [],
+      "Redundancy@odata.count" : 0,
+      "Temperatures" : [
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Temperatures/iDRAC.Embedded.1%23SystemBoardInletTemp",
+            "LowerThresholdCritical" : -7,
+            "LowerThresholdFatal" : -7,
+            "LowerThresholdNonCritical" : 3,
+            "MaxReadingRangeTemp" : 19,
+            "MemberId" : "iDRAC.Embedded.1#SystemBoardInletTemp",
+            "MinReadingRangeTemp" : 13,
+            "Name" : "System Board Inlet Temp",
+            "PhysicalContext" : "Intake",
+            "ReadingCelsius" : 21,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 4,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : 47,
+            "UpperThresholdFatal" : 47,
+            "UpperThresholdNonCritical" : 42
+         },
+         {
+            "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Temperatures/iDRAC.Embedded.1%23CPU1Temp",
+            "LowerThresholdCritical" : 3,
+            "LowerThresholdFatal" : 3,
+            "LowerThresholdNonCritical" : 8,
+            "MaxReadingRangeTemp" : 19,
+            "MemberId" : "iDRAC.Embedded.1#CPU1Temp",
+            "MinReadingRangeTemp" : 13,
+            "Name" : "CPU1 Temp",
+            "PhysicalContext" : "CPU",
+            "ReadingCelsius" : 39,
+            "RelatedItem" : [
+               {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+               }
+            ],
+            "RelatedItem@odata.count" : 1,
+            "SensorNumber" : 14,
+            "Status" : {
+               "Health" : "OK",
+               "State" : "Enabled"
+            },
+            "UpperThresholdCritical" : 100,
+            "UpperThresholdFatal" : 100,
+            "UpperThresholdNonCritical" : 95
+         }
+      ],
+      "Temperatures@odata.count" : 2
+   },
+   "/redfish/v1/Managers" : {
+      "@odata.context" : "/redfish/v1/$metadata#ManagerCollection.ManagerCollection",
+      "@odata.id" : "/redfish/v1/Managers",
+      "@odata.type" : "#ManagerCollection.ManagerCollection",
+      "Description" : "BMC",
+      "Members" : [
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1"
+         }
+      ],
+      "Members@odata.count" : 1,
+      "Name" : "Manager"
+   },
+   "/redfish/v1/Managers/iDRAC.Embedded.1" : {
+      "@odata.context" : "/redfish/v1/$metadata#Manager.Manager",
+      "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1",
+      "@odata.type" : "#Manager.v1_0_2.Manager",
+      "Actions" : {
+         "#Manager.Reset" : {
+            "ResetType@Redfish.AllowableValues" : [
+               "GracefulRestart"
+            ],
+            "target" : "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Manager.Reset"
+         }
+      },
+      "CommandShell" : {
+         "ConnectTypesSupported" : [
+            "SSH",
+            "Telnet",
+            "IPMI"
+         ],
+         "ConnectTypesSupported@odata.count" : 3,
+         "MaxConcurrentSessions" : 5,
+         "ServiceEnabled" : true
+      },
+      "DateTime" : "2026-10-05T04:58:20+02:00",
+      "DateTimeLocalOffset" : "+02:00",
+      "Description" : "BMC",
+      "EthernetInterfaces" : {
+         "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/EthernetInterfaces"
+      },
+      "FirmwareVersion" : "2.50.50.50",
+      "GraphicalConsole" : {
+         "ConnectTypesSupported" : [
+            "KVMIP"
+         ],
+         "ConnectTypesSupported@odata.count" : 1,
+         "MaxConcurrentSessions" : 1,
+         "ServiceEnabled" : true
+      },
+      "Id" : "iDRAC.Embedded.1",
+      "Links" : {
+         "ManagerForChassis" : [
+            {
+               "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+            }
+         ],
+         "ManagerForChassis@odata.count" : 1,
+         "ManagerForServers" : [
+            {
+               "@odata.id" : "/redfish/v1/Systems/System.Embedded.1"
+            }
+         ],
+         "ManagerForServers@odata.count" : 1
+      },
+      "LogServices" : {
+         "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices"
+      },
+      "ManagerType" : "BMC",
+      "Model" : "13G Monolithic",
+      "Name" : "Manager",
+      "NetworkProtocol" : {
+         "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/NetworkProtocol"
+      },
+      "Redundancy" : [],
+      "Redundancy@odata.count" : 0,
+      "SerialConsole" : {
+         "ConnectTypesSupported" : [],
+         "ConnectTypesSupported@odata.count" : 0,
+         "MaxConcurrentSessions" : 0,
+         "ServiceEnabled" : false
+      },
+      "SerialInterfaces" : {
+         "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/SerialInterfaces"
+      },
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UUID" : "00000000-0000-0000-0000-000000000001",
+      "VirtualMedia" : {
+         "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/VirtualMedia"
+      }
+   },
+   "/redfish/v1/Managers/iDRAC.Embedded.1/EthernetInterfaces" : {
+      "@odata.context" : "/redfish/v1/$metadata#EthernetInterfaceCollection.EthernetInterfaceCollection",
+      "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/EthernetInterfaces",
+      "@odata.type" : "#EthernetInterfaceCollection.EthernetInterfaceCollection",
+      "Description" : "Collection of EthernetInterfaces for this Manager",
+      "Members" : [
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/EthernetInterfaces/iDRAC.Embedded.1%23NIC.1"
+         }
+      ],
+      "Members@odata.count" : 1,
+      "Name" : "Ethernet Network Interface Collection"
+   },
+   "/redfish/v1/Managers/iDRAC.Embedded.1/EthernetInterfaces/iDRAC.Embedded.1%23NIC.1" : {
+      "@odata.context" : "/redfish/v1/$metadata#EthernetInterface.EthernetInterface",
+      "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/EthernetInterfaces/iDRAC.Embedded.1%23NIC.1",
+      "@odata.type" : "#EthernetInterface.v1_0_2.EthernetInterface",
+      "AutoNeg" : true,
+      "Description" : "Management Network Interface",
+      "FQDN" : "",
+      "FullDuplex" : true,
+      "HostName" : "host-2",
+      "IPv4Addresses" : [
+         {
+            "Address" : "192.0.2.1",
+            "AddressOrigin" : null,
+            "Gateway" : "192.0.2.2",
+            "SubnetMask" : "255.255.255.0"
+         }
+      ],
+      "IPv4Addresses@odata.count" : 1,
+      "IPv6AddressPolicyTable" : [],
+      "IPv6AddressPolicyTable@odata.count" : 0,
+      "IPv6Addresses" : [
+         {
+            "Address" : "::",
+            "AddressOrigin" : "Static",
+            "AddressState" : "Preferred",
+            "PrefixLength" : 64
+         },
+         {
+            "Address" : "::",
+            "AddressOrigin" : null,
+            "AddressState" : "Failed",
+            "PrefixLength" : 64
+         },
+         {
+            "Address" : "::",
+            "AddressOrigin" : null,
+            "AddressState" : null,
+            "PrefixLength" : 64
+         },
+         {
+            "Address" : "::",
+            "AddressOrigin" : null,
+            "AddressState" : null,
+            "PrefixLength" : 64
+         },
+         {
+            "Address" : "::",
+            "AddressOrigin" : null,
+            "AddressState" : null,
+            "PrefixLength" : 64
+         },
+         {
+            "Address" : "::",
+            "AddressOrigin" : null,
+            "AddressState" : null,
+            "PrefixLength" : 64
+         },
+         {
+            "Address" : "::",
+            "AddressOrigin" : null,
+            "AddressState" : null,
+            "PrefixLength" : 64
+         },
+         {
+            "Address" : "::",
+            "AddressOrigin" : null,
+            "AddressState" : null,
+            "PrefixLength" : 64
+         },
+         {
+            "Address" : "::",
+            "AddressOrigin" : null,
+            "AddressState" : null,
+            "PrefixLength" : 64
+         },
+         {
+            "Address" : "::",
+            "AddressOrigin" : null,
+            "AddressState" : null,
+            "PrefixLength" : 64
+         },
+         {
+            "Address" : "::",
+            "AddressOrigin" : null,
+            "AddressState" : null,
+            "PrefixLength" : 64
+         },
+         {
+            "Address" : "::",
+            "AddressOrigin" : null,
+            "AddressState" : null,
+            "PrefixLength" : 64
+         },
+         {
+            "Address" : "::",
+            "AddressOrigin" : null,
+            "AddressState" : null,
+            "PrefixLength" : 64
+         },
+         {
+            "Address" : "::",
+            "AddressOrigin" : null,
+            "AddressState" : null,
+            "PrefixLength" : 64
+         },
+         {
+            "Address" : "::",
+            "AddressOrigin" : null,
+            "AddressState" : null,
+            "PrefixLength" : 64
+         }
+      ],
+      "IPv6Addresses@odata.count" : 15,
+      "IPv6DefaultGateway" : "::",
+      "IPv6StaticAddresses" : [
+         {
+            "Address" : "::",
+            "PrefixLength" : 64
+         }
+      ],
+      "IPv6StaticAddresses@odata.count" : 1,
+      "Id" : "iDRAC.Embedded.1#NIC.1",
+      "InterfaceEnabled" : true,
+      "MACAddress" : "00:00:5E:00:53:01",
+      "MTUSize" : 1500,
+      "MaxIPv6StaticAddresses" : 16,
+      "Name" : "Manager Ethernet Interface",
+      "NameServers" : [
+         "192.0.2.2",
+         "0.0.0.0",
+         "192.0.2.2",
+         "0.0.0.0",
+         "::",
+         "::",
+         "::",
+         "::"
+      ],
+      "NameServers@odata.count" : 8,
+      "PermanentMACAddress" : "00:00:5E:00:53:01",
+      "SpeedMbps" : 100,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "VLAN" : {
+         "VLANEnable" : false,
+         "VLANId" : 66
+      }
+   },
+   "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices" : {
+      "@odata.context" : "/redfish/v1/$metadata#LogServiceCollection.LogServiceCollection",
+      "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices",
+      "@odata.type" : "#LogServiceCollection.LogServiceCollection",
+      "Description" : "Collection of Log Services for this Manager",
+      "Members" : [
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Sel"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog"
+         }
+      ],
+      "Members@odata.count" : 2,
+      "Name" : "Log Service Collection"
+   },
+   "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog" : {
+      "@odata.context" : "/redfish/v1/$metadata#LogService.LogService",
+      "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog",
+      "@odata.type" : "#LogService.v1_0_2.LogService",
+      "DateTime" : "2026-10-05T04:58:45+02:00",
+      "DateTimeLocalOffset" : "+02:00",
+      "Description" : "LifeCycle Controller Log Service",
+      "Entries" : {
+         "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog"
+      },
+      "Id" : "LC",
+      "MaxNumberOfRecords" : 500000,
+      "Name" : "LifeCycle Controller Log Service",
+      "OverWritePolicy" : "WrapsWhenFull",
+      "ServiceEnabled" : true
+   },
+   "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Sel" : {
+      "@odata.context" : "/redfish/v1/$metadata#LogService.LogService",
+      "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Sel",
+      "@odata.type" : "#LogService.v1_0_2.LogService",
+      "Actions" : {
+         "#LogService.ClearLog" : {
+            "target" : "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Sel/Actions/LogService.ClearLog"
+         }
+      },
+      "DateTime" : "2026-10-05T04:58:44+02:00",
+      "DateTimeLocalOffset" : "+02:00",
+      "Description" : "SEL Log Service",
+      "Entries" : {
+         "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel"
+      },
+      "Id" : "SEL",
+      "MaxNumberOfRecords" : 1024,
+      "Name" : "SEL Log Service",
+      "OverWritePolicy" : "WrapsWhenFull",
+      "ServiceEnabled" : true
+   },
+   "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog" : {
+      "@odata.context" : "/redfish/v1/$metadata#LogEntryCollection.LogEntryCollection",
+      "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog",
+      "@odata.nextLink" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog?$skip=50",
+      "@odata.type" : "#LogEntryCollection.LogEntryCollection",
+      "Description" : "LC Logs for this manager",
+      "Members" : [
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1749",
+            "Created" : "2026-10-05T04:58:18+02:00",
+            "Description" : " Log Entry 1749",
+            "EntryType" : "Oem",
+            "Id" : "1749",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 3,
+            "MessageID" : "USR0030",
+            "Name" : " Log Entry 1749",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1748",
+            "Created" : "2026-10-05T04:55:09+02:00",
+            "Description" : " Log Entry 1748",
+            "EntryType" : "Oem",
+            "Id" : "1748",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 3,
+            "MessageID" : "USR0032",
+            "Name" : " Log Entry 1748",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1747",
+            "Created" : "2026-10-05T04:54:40+02:00",
+            "Description" : " Log Entry 1747",
+            "EntryType" : "Oem",
+            "Id" : "1747",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 3,
+            "MessageID" : "USR0030",
+            "Name" : " Log Entry 1747",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1746",
+            "Created" : "2026-10-05T04:44:34+02:00",
+            "Description" : " Log Entry 1746",
+            "EntryType" : "Oem",
+            "Id" : "1746",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageID" : "RAC802",
+            "Name" : " Log Entry 1746",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1745",
+            "Created" : "2026-10-05T04:44:34+02:00",
+            "Description" : " Log Entry 1745",
+            "EntryType" : "Oem",
+            "Id" : "1745",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 1,
+            "MessageID" : "LOG007",
+            "Name" : " Log Entry 1745",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1744",
+            "Created" : "2026-10-05T02:42:36+02:00",
+            "Description" : " Log Entry 1744",
+            "EntryType" : "Oem",
+            "Id" : "1744",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 3,
+            "MessageID" : "USR0030",
+            "Name" : " Log Entry 1744",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1743",
+            "Created" : "2026-10-05T02:42:19+02:00",
+            "Description" : " Log Entry 1743",
+            "EntryType" : "Oem",
+            "Id" : "1743",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 2,
+            "MessageID" : "IPA0100",
+            "Name" : " Log Entry 1743",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1742",
+            "Created" : "2026-10-05T02:40:05+02:00",
+            "Description" : " Log Entry 1742",
+            "EntryType" : "Oem",
+            "Id" : "1742",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 1,
+            "MessageID" : "SWC1911",
+            "Name" : " Log Entry 1742",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1741",
+            "Created" : "2026-10-03T03:00:08+02:00",
+            "Description" : " Log Entry 1741",
+            "EntryType" : "Oem",
+            "Id" : "1741",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Storage/Controllers/RAID.Slot.2-1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 1,
+            "MessageID" : "CTL37",
+            "Name" : " Log Entry 1741",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1740",
+            "Created" : "2026-09-29T20:44:23+02:00",
+            "Description" : " Log Entry 1740",
+            "EntryType" : "Oem",
+            "Id" : "1740",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Storage/Controllers/RAID.Slot.2-1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 1,
+            "MessageID" : "CTL38",
+            "Name" : " Log Entry 1740",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1739",
+            "Created" : "2026-09-26T03:00:13+02:00",
+            "Description" : " Log Entry 1739",
+            "EntryType" : "Oem",
+            "Id" : "1739",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Storage/Controllers/RAID.Slot.2-1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 1,
+            "MessageID" : "CTL37",
+            "Name" : " Log Entry 1739",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1738",
+            "Created" : "2026-09-22T11:04:05+02:00",
+            "Description" : " Log Entry 1738",
+            "EntryType" : "Oem",
+            "Id" : "1738",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Storage/Controllers/RAID.Slot.2-1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 1,
+            "MessageID" : "CTL38",
+            "Name" : " Log Entry 1738",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1737",
+            "Created" : "2026-09-19T03:00:21+02:00",
+            "Description" : " Log Entry 1737",
+            "EntryType" : "Oem",
+            "Id" : "1737",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Storage/Controllers/RAID.Slot.2-1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 1,
+            "MessageID" : "CTL37",
+            "Name" : " Log Entry 1737",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1736",
+            "Created" : "2026-09-15T09:18:30+02:00",
+            "Description" : " Log Entry 1736",
+            "EntryType" : "Oem",
+            "Id" : "1736",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Storage/Controllers/RAID.Slot.2-1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 1,
+            "MessageID" : "CTL38",
+            "Name" : " Log Entry 1736",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1735",
+            "Created" : "2026-09-12T03:00:27+02:00",
+            "Description" : " Log Entry 1735",
+            "EntryType" : "Oem",
+            "Id" : "1735",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Storage/Controllers/RAID.Slot.2-1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 1,
+            "MessageID" : "CTL37",
+            "Name" : " Log Entry 1735",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1734",
+            "Created" : "2026-09-08T13:03:41+02:00",
+            "Description" : " Log Entry 1734",
+            "EntryType" : "Oem",
+            "Id" : "1734",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Storage/Controllers/RAID.Slot.2-1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 1,
+            "MessageID" : "CTL38",
+            "Name" : " Log Entry 1734",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1733",
+            "Created" : "2026-09-05T03:00:34+02:00",
+            "Description" : " Log Entry 1733",
+            "EntryType" : "Oem",
+            "Id" : "1733",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Storage/Controllers/RAID.Slot.2-1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 1,
+            "MessageID" : "CTL37",
+            "Name" : " Log Entry 1733",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1732",
+            "Created" : "2026-08-31T12:41:18+02:00",
+            "Description" : " Log Entry 1732",
+            "EntryType" : "Oem",
+            "Id" : "1732",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Storage/Controllers/RAID.Slot.2-1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 1,
+            "MessageID" : "CTL38",
+            "Name" : " Log Entry 1732",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1731",
+            "Created" : "2026-08-29T03:00:37+02:00",
+            "Description" : " Log Entry 1731",
+            "EntryType" : "Oem",
+            "Id" : "1731",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Storage/Controllers/RAID.Slot.2-1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 1,
+            "MessageID" : "CTL37",
+            "Name" : " Log Entry 1731",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog/1730",
+            "Created" : "2026-08-24T12:45:05+02:00",
+            "Description" : " Log Entry 1730",
+            "EntryType" : "Oem",
+            "Id" : "1730",
+            "Links" : {
+               "OriginOfCondition" : {
+                  "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Storage/Controllers/RAID.Slot.2-1"
+               }
+            },
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 1,
+            "MessageID" : "CTL38",
+            "Name" : " Log Entry 1730",
+            "OEMRecordFormat" : "Dell",
+            "Severity" : "OK"
+         }
+      ],
+      "Members@odata.count" : 20,
+      "Name" : "Log Entry Collection"
+   },
+   "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel" : {
+      "@odata.context" : "/redfish/v1/$metadata#LogEntryCollection.LogEntryCollection",
+      "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel",
+      "@odata.nextLink" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel?$skip=50",
+      "@odata.type" : "#LogEntryCollection.LogEntryCollection",
+      "Description" : "System Event Logs for this manager",
+      "Members" : [
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/80",
+            "Created" : "2026-08-10T17:15:28+02:00",
+            "Description" : " Log Entry 80",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "80",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "1520",
+            "Name" : " Log Entry 80",
+            "SensorNumber" : 26,
+            "SensorType" : [
+               {
+                  "Member" : null
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/79",
+            "Created" : "2026-08-10T17:15:28+02:00",
+            "Description" : " Log Entry 79",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "79",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "ac04",
+            "Name" : " Log Entry 79",
+            "SensorNumber" : 56,
+            "SensorType" : [
+               {
+                  "Member" : "Critical Interrupt"
+               }
+            ],
+            "Severity" : "Critical"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/78",
+            "Created" : "2026-08-10T17:15:28+02:00",
+            "Description" : " Log Entry 78",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "78",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "a220",
+            "Name" : " Log Entry 78",
+            "SensorNumber" : 46,
+            "SensorType" : [
+               {
+                  "Member" : null
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/77",
+            "Created" : "2025-09-03T22:21:00+02:00",
+            "Description" : " Log Entry 77",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "77",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "a015",
+            "Name" : " Log Entry 77",
+            "SensorNumber" : 165,
+            "SensorType" : [
+               {
+                  "Member" : "Drive Slot/Bay"
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/76",
+            "Created" : "2025-09-03T22:18:05+02:00",
+            "Description" : " Log Entry 76",
+            "EntryCode" : [
+               {
+                  "Member" : "Deassert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "76",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "a015",
+            "Name" : " Log Entry 76",
+            "SensorNumber" : 165,
+            "SensorType" : [
+               {
+                  "Member" : "Drive Slot/Bay"
+               }
+            ],
+            "Severity" : "Critical"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/75",
+            "Created" : "2025-08-20T12:30:55+02:00",
+            "Description" : " Log Entry 75",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "75",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "a010",
+            "Name" : " Log Entry 75",
+            "SensorNumber" : 160,
+            "SensorType" : [
+               {
+                  "Member" : "Drive Slot/Bay"
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/74",
+            "Created" : "2025-08-20T12:24:00+02:00",
+            "Description" : " Log Entry 74",
+            "EntryCode" : [
+               {
+                  "Member" : "Deassert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "74",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "a110",
+            "Name" : " Log Entry 74",
+            "SensorNumber" : 160,
+            "SensorType" : [
+               {
+                  "Member" : "Drive Slot/Bay"
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/73",
+            "Created" : "2025-08-20T12:24:00+02:00",
+            "Description" : " Log Entry 73",
+            "EntryCode" : [
+               {
+                  "Member" : "Deassert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "73",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "a010",
+            "Name" : " Log Entry 73",
+            "SensorNumber" : 160,
+            "SensorType" : [
+               {
+                  "Member" : "Drive Slot/Bay"
+               }
+            ],
+            "Severity" : "Critical"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/72",
+            "Created" : "2025-08-13T16:42:18+02:00",
+            "Description" : " Log Entry 72",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "72",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "a110",
+            "Name" : " Log Entry 72",
+            "SensorNumber" : 160,
+            "SensorType" : [
+               {
+                  "Member" : "Drive Slot/Bay"
+               }
+            ],
+            "Severity" : "Critical"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/71",
+            "Created" : "2025-04-14T18:02:27+02:00",
+            "Description" : " Log Entry 71",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "71",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "000",
+            "Name" : " Log Entry 71",
+            "SensorNumber" : 40,
+            "SensorType" : [
+               {
+                  "Member" : null
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/70",
+            "Created" : "2025-04-14T18:02:27+02:00",
+            "Description" : " Log Entry 70",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "70",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "180",
+            "Name" : " Log Entry 70",
+            "SensorNumber" : 40,
+            "SensorType" : [
+               {
+                  "Member" : null
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/69",
+            "Created" : "2025-04-14T18:02:27+02:00",
+            "Description" : " Log Entry 69",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "69",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "0080",
+            "Name" : " Log Entry 69",
+            "SensorNumber" : 40,
+            "SensorType" : [
+               {
+                  "Member" : null
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/68",
+            "Created" : "2025-04-14T18:02:27+02:00",
+            "Description" : " Log Entry 68",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "68",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "340",
+            "Name" : " Log Entry 68",
+            "SensorNumber" : 40,
+            "SensorType" : [
+               {
+                  "Member" : null
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/67",
+            "Created" : "2025-04-14T18:02:27+02:00",
+            "Description" : " Log Entry 67",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "67",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "000",
+            "Name" : " Log Entry 67",
+            "SensorNumber" : 40,
+            "SensorType" : [
+               {
+                  "Member" : null
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/66",
+            "Created" : "2025-04-14T18:02:27+02:00",
+            "Description" : " Log Entry 66",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "66",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "000",
+            "Name" : " Log Entry 66",
+            "SensorNumber" : 40,
+            "SensorType" : [
+               {
+                  "Member" : null
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/65",
+            "Created" : "2025-04-14T18:02:26+02:00",
+            "Description" : " Log Entry 65",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "65",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "01067",
+            "Name" : " Log Entry 65",
+            "SensorNumber" : 40,
+            "SensorType" : [
+               {
+                  "Member" : null
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/64",
+            "Created" : "2025-04-14T18:02:26+02:00",
+            "Description" : " Log Entry 64",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "64",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "240",
+            "Name" : " Log Entry 64",
+            "SensorNumber" : 40,
+            "SensorType" : [
+               {
+                  "Member" : null
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/63",
+            "Created" : "2025-04-14T18:02:26+02:00",
+            "Description" : " Log Entry 63",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "63",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "080bd",
+            "Name" : " Log Entry 63",
+            "SensorNumber" : 40,
+            "SensorType" : [
+               {
+                  "Member" : null
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/62",
+            "Created" : "2025-04-14T18:02:26+02:00",
+            "Description" : " Log Entry 62",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "62",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "000",
+            "Name" : " Log Entry 62",
+            "SensorNumber" : 40,
+            "SensorType" : [
+               {
+                  "Member" : null
+               }
+            ],
+            "Severity" : "OK"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Sel/61",
+            "Created" : "2025-04-14T18:02:26+02:00",
+            "Description" : " Log Entry 61",
+            "EntryCode" : [
+               {
+                  "Member" : "Assert"
+               }
+            ],
+            "EntryType" : "SEL",
+            "Id" : "61",
+            "Links" : {},
+            "Message" : "Message text removed.",
+            "MessageArgs@odata.count" : 0,
+            "MessageID" : "060",
+            "Name" : " Log Entry 61",
+            "SensorNumber" : 40,
+            "SensorType" : [
+               {
+                  "Member" : null
+               }
+            ],
+            "Severity" : "OK"
+         }
+      ],
+      "Members@odata.count" : 20,
+      "Name" : "Log Entry Collection"
+   },
+   "/redfish/v1/Systems" : {
+      "@odata.context" : "/redfish/v1/$metadata#ComputerSystemCollection.ComputerSystemCollection",
+      "@odata.id" : "/redfish/v1/Systems",
+      "@odata.type" : "#ComputerSystemCollection.ComputerSystemCollection",
+      "Description" : "Collection of Computer Systems",
+      "Members" : [
+         {
+            "@odata.id" : "/redfish/v1/Systems/System.Embedded.1"
+         }
+      ],
+      "Members@odata.count" : 1,
+      "Name" : "Computer System Collection"
+   },
+   "/redfish/v1/Systems/System.Embedded.1" : {
+      "@odata.context" : "/redfish/v1/$metadata#ComputerSystem.ComputerSystem",
+      "@odata.id" : "/redfish/v1/Systems/System.Embedded.1",
+      "@odata.type" : "#ComputerSystem.v1_1_0.ComputerSystem",
+      "Actions" : {
+         "#ComputerSystem.Reset" : {
+            "ResetType@Redfish.AllowableValues" : [
+               "On",
+               "ForceOff",
+               "GracefulRestart",
+               "PushPowerButton",
+               "Nmi"
+            ],
+            "target" : "/redfish/v1/Systems/System.Embedded.1/Actions/ComputerSystem.Reset"
+         }
+      },
+      "AssetTag" : "",
+      "Bios" : {
+         "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Bios"
+      },
+      "BiosVersion" : "2.4.3",
+      "Boot" : {
+         "BootSourceOverrideEnabled" : "Once",
+         "BootSourceOverrideTarget" : "None",
+         "BootSourceOverrideTarget@Redfish.AllowableValues" : [
+            "None",
+            "Pxe",
+            "Cd",
+            "Floppy",
+            "Hdd",
+            "BiosSetup",
+            "Utilities",
+            "UefiTarget",
+            "SDCard"
+         ],
+         "UefiTargetBootSourceOverride" : ""
+      },
+      "Description" : "Computer System which represents a machine (physical or virtual) and the local resources such as memory, cpu and other devices that can be accessed from that machine.",
+      "EthernetInterfaces" : {
+         "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces"
+      },
+      "HostName" : "host-3",
+      "Id" : "System.Embedded.1",
+      "IndicatorLED" : "Blinking",
+      "Links" : {
+         "Chassis" : [
+            {
+               "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1"
+            }
+         ],
+         "Chassis@odata.count" : 1,
+         "CooledBy" : [
+            {
+               "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17||Fan.Embedded.Sys 1"
+            }
+         ],
+         "CooledBy@odata.count" : 1,
+         "ManagedBy" : [
+            {
+               "@odata.id" : "/redfish/v1/Managers/iDRAC.Embedded.1"
+            }
+         ],
+         "ManagedBy@odata.count" : 1,
+         "PoweredBy" : [
+            {
+               "@odata.id" : "/redfish/v1/Chassis/System.Embedded.1/Power/PowerSupplies/PSU.Slot.1"
+            }
+         ],
+         "PoweredBy@odata.count" : 1
+      },
+      "Manufacturer" : "Dell Inc.",
+      "MemorySummary" : {
+         "Status" : {
+            "Health" : "OK",
+            "HealthRollup" : "OK",
+            "State" : "Enabled"
+         },
+         "TotalSystemMemoryGiB" : 64.0
+      },
+      "Model" : "PowerEdge T330",
+      "Name" : "System",
+      "PartNumber" : "06FW8MA01",
+      "PowerState" : "On",
+      "ProcessorSummary" : {
+         "Count" : 1,
+         "Model" : "Intel(R) Xeon(R) CPU E3-1220 v6 @ 3.00GHz",
+         "Status" : {
+            "Health" : "OK",
+            "HealthRollup" : "OK",
+            "State" : "Enabled"
+         }
+      },
+      "Processors" : {
+         "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors"
+      },
+      "SKU" : "TAG0001",
+      "SecureBoot" : {
+         "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/SecureBoot"
+      },
+      "SerialNumber" : "SERIAL0001",
+      "SimpleStorage" : {
+         "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Storage/Controllers"
+      },
+      "Status" : {
+         "Health" : "OK",
+         "HealthRollup" : "OK",
+         "State" : "Enabled"
+      },
+      "SystemType" : "Physical",
+      "UUID" : "00000000-0000-0000-0000-000000000002"
+   },
+   "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces" : {
+      "@odata.context" : "/redfish/v1/$metadata#EthernetInterfaceCollection.EthernetInterfaceCollection",
+      "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces",
+      "@odata.type" : "#EthernetInterfaceCollection.EthernetInterfaceCollection",
+      "Description" : "Collection of Ethernet Interfaces for this System",
+      "Members" : [
+         {
+            "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Embedded.1-1-1"
+         },
+         {
+            "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Embedded.2-1-1"
+         }
+      ],
+      "Members@odata.count" : 2,
+      "Name" : "System Ethernet Interface Collection"
+   },
+   "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Embedded.1-1-1" : {
+      "@odata.context" : "/redfish/v1/$metadata#EthernetInterface.EthernetInterface",
+      "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Embedded.1-1-1",
+      "@odata.type" : "#EthernetInterface.v1_0_2.EthernetInterface",
+      "AutoNeg" : true,
+      "Description" : "Embedded NIC 1 Port 1 Partition 1",
+      "FQDN" : null,
+      "FullDuplex" : true,
+      "HostName" : null,
+      "IPv4Addresses" : [],
+      "IPv4Addresses@odata.count" : 0,
+      "IPv6AddressPolicyTable" : [],
+      "IPv6AddressPolicyTable@odata.count" : 0,
+      "IPv6Addresses" : [],
+      "IPv6Addresses@odata.count" : 0,
+      "IPv6DefaultGateway" : null,
+      "IPv6StaticAddresses" : [],
+      "IPv6StaticAddresses@odata.count" : 0,
+      "Id" : "NIC.Embedded.1-1-1",
+      "InterfaceEnabled" : null,
+      "MACAddress" : "00:00:5E:00:53:02",
+      "MTUSize" : null,
+      "MaxIPv6StaticAddresses" : null,
+      "Name" : "System Ethernet Interface",
+      "NameServers" : [],
+      "NameServers@odata.count" : 0,
+      "PermanentMACAddress" : "00:00:5E:00:53:02",
+      "SpeedMbps" : 1000,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UefiDevicePath" : "PciRoot(0x0)/Pci(0x1D,0x0)/Pci(0x0,0x0)/MAC(00005E005302,0x0)",
+      "VLAN" : null
+   },
+   "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Embedded.2-1-1" : {
+      "@odata.context" : "/redfish/v1/$metadata#EthernetInterface.EthernetInterface",
+      "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Embedded.2-1-1",
+      "@odata.type" : "#EthernetInterface.v1_0_2.EthernetInterface",
+      "AutoNeg" : true,
+      "Description" : "Embedded NIC 2 Port 1 Partition 1",
+      "FQDN" : null,
+      "FullDuplex" : true,
+      "HostName" : null,
+      "IPv4Addresses" : [],
+      "IPv4Addresses@odata.count" : 0,
+      "IPv6AddressPolicyTable" : [],
+      "IPv6AddressPolicyTable@odata.count" : 0,
+      "IPv6Addresses" : [],
+      "IPv6Addresses@odata.count" : 0,
+      "IPv6DefaultGateway" : null,
+      "IPv6StaticAddresses" : [],
+      "IPv6StaticAddresses@odata.count" : 0,
+      "Id" : "NIC.Embedded.2-1-1",
+      "InterfaceEnabled" : null,
+      "MACAddress" : "00:00:5E:00:53:03",
+      "MTUSize" : null,
+      "MaxIPv6StaticAddresses" : null,
+      "Name" : "System Ethernet Interface",
+      "NameServers" : [],
+      "NameServers@odata.count" : 0,
+      "PermanentMACAddress" : "00:00:5E:00:53:03",
+      "SpeedMbps" : 100,
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "UefiDevicePath" : "PciRoot(0x0)/Pci(0x1D,0x0)/Pci(0x0,0x1)/MAC(00005E005303,0x0)",
+      "VLAN" : null
+   },
+   "/redfish/v1/Systems/System.Embedded.1/Processors" : {
+      "@odata.context" : "/redfish/v1/$metadata#ProcessorCollection.ProcessorCollection",
+      "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors",
+      "@odata.type" : "#ProcessorCollection.ProcessorCollection",
+      "Description" : "Collection of Processors for this System",
+      "Members" : [
+         {
+            "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"
+         }
+      ],
+      "Members@odata.count" : 1,
+      "Name" : "ProcessorsCollection"
+   },
+   "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1" : {
+      "@odata.context" : "/redfish/v1/$metadata#Processor.Processor",
+      "@odata.id" : "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1",
+      "@odata.type" : "#Processor.v1_0_2.Processor",
+      "Description" : "Represents the properties of a Processor attached to this System",
+      "Id" : "CPU.Socket.1",
+      "InstructionSet" : [
+         {
+            "Member" : "x86-64"
+         }
+      ],
+      "Manufacturer" : "Intel",
+      "MaxSpeedMHz" : 4000,
+      "Model" : "Intel(R) Xeon(R) CPU E3-1220 v6 @ 3.00GHz",
+      "Name" : "CPU 1",
+      "ProcessorArchitecture" : [
+         {
+            "Member" : "x86"
+         }
+      ],
+      "ProcessorId" : {
+         "EffectiveFamily" : "6",
+         "EffectiveModel" : "158",
+         "IdentificationRegisters" : "0x000906E9",
+         "MicrocodeInfo" : "0x84",
+         "Step" : "9",
+         "VendorId" : "GenuineIntel"
+      },
+      "ProcessorType" : "CPU",
+      "Socket" : "CPU.Socket.1",
+      "Status" : {
+         "Health" : "OK",
+         "State" : "Enabled"
+      },
+      "TotalCores" : 4,
+      "TotalThreads" : 4
+   }
+}
