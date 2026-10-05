@@ -123,8 +123,8 @@ Where L</clear_sel> sends its order, or L<WWW::iDRAC::Error::Unsupported>.
 
 =cut
 
-sub probe_sel       { $_[0]->linked_path( $_[0]->service( sel   => 'sel' ),       Entries => 'sel' ) }
-sub probe_lifecycle { $_[0]->linked_path( $_[0]->service( lclog => 'lifecycle' ), Entries => 'lifecycle' ) }
+sub probe_sel       { $_[0]->linked_document( $_[0]->service( sel   => 'sel' ),       Entries => 'sel' ) }
+sub probe_lifecycle { $_[0]->linked_document( $_[0]->service( lclog => 'lifecycle' ), Entries => 'lifecycle' ) }
 sub probe_clear_sel { $_[0]->clear_action }
 
 =method probe_sel

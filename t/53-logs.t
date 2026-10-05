@@ -83,6 +83,15 @@ subtest 'a controller without these logs' => sub {
   isa_ok( error_of { $logs->sel }, 'WWW::iDRAC::Error::Unsupported', 'a manager without log services' );
 };
 
+subtest 'entries that are linked but not there' => sub {
+  my $fake = FakeiDRAC->new;
+  $fake->remove( $manager.'/Logs/Sel' );
+  my $logs = idrac($fake)->logs;
+  isa_ok( error_of { $logs->sel }, 'WWW::iDRAC::Error::Unsupported', 'sel' );
+  ok( !$logs->supports('sel'), 'supports says the same' );
+  ok( $logs->supports('lifecycle'), 'and still yes for the other log' );
+};
+
 is_deeply( \@warnings, [], 'no warnings' );
 
 done_testing;

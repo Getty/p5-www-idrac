@@ -18,9 +18,10 @@ C<logs>, C<manager>). It reaches the controller only through L</redfish>,
 returns translated data, never raw documents, and turns a resource this
 controller does not have into L<WWW::iDRAC::Error::Unsupported>.
 
-Each public method C<x> has a C<probe_x> beside it, which fetches what the
-method needs and throws where the method would. L</supports> is built on
-those, so its answer comes from what the controller offers.
+Each public method C<x> has a C<probe_x> beside it, which fetches the
+documents the method starts from, not only the links to them, and throws
+where the method would. L</supports> is built on those, so its answer comes
+from what the controller offers.
 
 =cut
 
@@ -61,25 +62,28 @@ sub _not_found {
 sub fetch {
   my ( $self, $path, $method ) = @_;
   my $doc;
-  return $doc if eval { $doc = $self->redfish->get($path); 1 };
-  my $error = $@;
-  $self->unsupported( $method, $path.' does not exist' ) if $self->_not_found($error);
-  die $error;
+  if ( !eval { $doc = $self->redfish->get($path); 1 } ) {
+    my $error = $@;
+    $self->unsupported( $method, $path.' does not exist' ) if $self->_not_found($error);
+    die $error;
+  }
+  $self->unsupported( $method, $path.' holds no document' ) unless ref $doc eq 'HASH';
+  return $doc;
 }
 
 =method fetch
 
     my $doc = $self->fetch( $path, 'temperatures' );
 
-A document, where a 404 is L<WWW::iDRAC::Error::Unsupported> for the named
-method.
+A document. A 404, and an answer that is no document, are
+L<WWW::iDRAC::Error::Unsupported> for the named method.
 
 =cut
 
 sub fetch_members {
   my ( $self, $path, $method, %arg ) = @_;
   my @docs;
-  return @docs if eval { @docs = $self->redfish->members( $path, %arg ); 1 };
+  return grep { ref $_ eq 'HASH' } @docs if eval { @docs = $self->redfish->members( $path, %arg ); 1 };
   my $error = $@;
   $self->unsupported( $method, $path.' does not exist' ) if $self->_not_found($error);
   die $error;
@@ -95,10 +99,14 @@ The entries of a collection, with the same treatment of a 404.
 
 sub resource {
   my ( $self, $kind, $method ) = @_;
-  my $path = $self->redfish->locate($kind) // $self->unsupported( $method, 'the controller has no '.$kind.' resource' );
-  my $doc  = $self->fetch( $path, $method );
-  $self->unsupported( $method, $path.' is empty' ) unless ref $doc eq 'HASH';
-  return $doc;
+  my $path;
+  if ( !eval { $path = $self->redfish->locate($kind); 1 } ) {
+    my $error = $@;
+    $self->unsupported( $method, 'a document on the way to the '.$kind.' resource does not exist' ) if $self->_not_found($error);
+    die $error;
+  }
+  $self->unsupported( $method, 'the controller has no '.$kind.' resource' ) unless defined $path;
+  return $self->fetch( $path, $method );
 }
 
 =method resource
@@ -106,6 +114,19 @@ sub resource {
     my $system = $self->resource( Systems => 'info' );
 
 The current document of the system, the chassis or the manager.
+
+=cut
+
+sub linked_document {
+  my ( $self, $doc, $key, $method ) = @_;
+  return $self->fetch( $self->linked_path( $doc, $key, $method ), $method );
+}
+
+=method linked_document
+
+    my $thermal = $self->linked_document( $chassis, Thermal => 'temperatures' );
+
+The document behind L</linked_path>.
 
 =cut
 

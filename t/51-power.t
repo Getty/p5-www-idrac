@@ -102,6 +102,14 @@ subtest 'supports' => sub {
   isa_ok( error_of { $power->supports('reset_action') }, 'WWW::iDRAC::Error::Validation', 'a helper is no capability' );
 };
 
+subtest 'a power resource that is linked but not there' => sub {
+  my $fake = FakeiDRAC->new;
+  $fake->remove('/redfish/v1/Chassis/System.Embedded.1/Power');
+  my $power = idrac($fake)->power;
+  isa_ok( error_of { $power->consumption }, 'WWW::iDRAC::Error::Unsupported', 'consumption' );
+  ok( !$power->supports('consumption'), 'supports says the same' );
+};
+
 is_deeply( \@warnings, [], 'no warnings' );
 
 done_testing;

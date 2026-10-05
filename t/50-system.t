@@ -98,6 +98,16 @@ subtest 'supports' => sub {
   isa_ok( error_of { $down->supports('info') }, 'WWW::iDRAC::Error::API', 'an error on the way is not a no' );
 };
 
+subtest 'a collection that is linked but not there' => sub {
+  my $fake = FakeiDRAC->new;
+  $fake->remove( $path.'/Processors' );
+  my $system = idrac($fake)->system;
+  my $error  = error_of { $system->processors };
+  isa_ok( $error, 'WWW::iDRAC::Error::Unsupported', 'processors' );
+  ok( !$system->supports('processors'), 'supports says the same' );
+  ok( $system->supports('nics'), 'and still yes for what is there' );
+};
+
 is_deeply( \@warnings, [], 'no warnings' );
 
 done_testing;

@@ -28,7 +28,7 @@ an empty socket for example, is listed here too, with the reading C<undef>.
 
 sub _document {
   my ( $self, $key, $method ) = @_;
-  return $self->fetch( $self->linked_path( $self->resource( Chassis => $method ), $key, $method ), $method );
+  return $self->linked_document( $self->resource( Chassis => $method ), $key, $method );
 }
 
 sub temperatures {
@@ -137,10 +137,10 @@ C<capacity_watts>, C<input_volts>, C<output_watts>, C<health>.
 
 =cut
 
-sub probe_temperatures   { $_[0]->linked_path( $_[0]->resource( Chassis => 'temperatures' ),   Thermal => 'temperatures' ) }
-sub probe_fans           { $_[0]->linked_path( $_[0]->resource( Chassis => 'fans' ),           Thermal => 'fans' ) }
-sub probe_voltages       { $_[0]->linked_path( $_[0]->resource( Chassis => 'voltages' ),       Power   => 'voltages' ) }
-sub probe_power_supplies { $_[0]->linked_path( $_[0]->resource( Chassis => 'power_supplies' ), Power   => 'power_supplies' ) }
+sub probe_temperatures   { $_[0]->_document( Thermal => 'temperatures' ) }
+sub probe_fans           { $_[0]->_document( Thermal => 'fans' ) }
+sub probe_voltages       { $_[0]->_document( Power   => 'voltages' ) }
+sub probe_power_supplies { $_[0]->_document( Power   => 'power_supplies' ) }
 
 =method probe_temperatures
 

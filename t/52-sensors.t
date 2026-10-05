@@ -68,8 +68,27 @@ subtest 'a chassis without sensors' => sub {
     is( $error->capability, 'sensors.'.$method, 'names the capability' );
   }
   ok( !$sensors->supports('temperatures'), 'supports: no thermal resource' );
-  ok( $sensors->supports('voltages'), 'supports follows the link, not the document behind it' );
+  ok( !$sensors->supports('voltages'), 'supports: the link to the power resource leads nowhere' );
   ok( idrac( FakeiDRAC->new )->sensors->supports($_), $_ ) for qw( temperatures fans voltages power_supplies );
+};
+
+subtest 'a document that is no document' => sub {
+  my $fake = FakeiDRAC->new;
+  $fake->{docs}{ $chassis.'/Thermal' } = [ 1, 2 ];
+  my $sensors = idrac($fake)->sensors;
+  my $error   = error_of { $sensors->temperatures };
+  isa_ok( $error, 'WWW::iDRAC::Error::Unsupported', 'a list where a document was expected' );
+  like( "$error", qr/holds no document\z/, 'and the message says so' );
+  ok( !$sensors->supports('temperatures'), 'supports agrees' );
+};
+
+subtest 'a system that is listed but not there' => sub {
+  my $fake = FakeiDRAC->new;
+  $fake->remove('/redfish/v1/Systems/System.Embedded.1');
+  my $sensors = idrac($fake)->sensors;
+  isa_ok( error_of { $sensors->temperatures }, 'WWW::iDRAC::Error::Unsupported', 'the chassis cannot be found through it' );
+  is( error_of { $sensors->supports('temperatures') }, undef, 'and supports answers instead of dying' );
+  ok( !$sensors->supports('temperatures'), 'with no' );
 };
 
 is_deeply( \@warnings, [], 'no warnings' );

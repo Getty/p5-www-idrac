@@ -154,9 +154,9 @@ C<speed_mbps>, C<link_up>, C<health>.
 =cut
 
 sub probe_info       { $_[0]->resource( Systems => 'info' ) }
-sub probe_processors { $_[0]->linked_path( $_[0]->resource( Systems => 'processors' ), Processors => 'processors' ) }
-sub probe_memory     { $_[0]->linked_path( $_[0]->resource( Systems => 'memory' ), Memory => 'memory' ) }
-sub probe_nics       { $_[0]->linked_path( $_[0]->resource( Systems => 'nics' ), EthernetInterfaces => 'nics' ) }
+sub probe_processors { $_[0]->linked_document( $_[0]->resource( Systems => 'processors' ), Processors => 'processors' ) }
+sub probe_memory     { $_[0]->linked_document( $_[0]->resource( Systems => 'memory' ), Memory => 'memory' ) }
+sub probe_nics       { $_[0]->linked_document( $_[0]->resource( Systems => 'nics' ), EthernetInterfaces => 'nics' ) }
 
 =method probe_info
 

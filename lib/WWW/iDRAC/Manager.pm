@@ -50,12 +50,16 @@ The translation behind L</info>, without I/O.
 
 =cut
 
-sub network {
+sub _interface {
   my ( $self ) = @_;
   my $path = $self->linked_path( $self->resource( Managers => 'network' ), EthernetInterfaces => 'network' );
   my ( $interface ) = $self->fetch_members( $path, 'network', limit => 1 );
-  $self->unsupported( network => 'the controller lists no network interface' ) unless ref $interface eq 'HASH';
-  return $self->network_from($interface);
+  return $interface // $self->unsupported( network => 'the controller lists no network interface' );
+}
+
+sub network {
+  my ( $self ) = @_;
+  return $self->network_from( $self->_interface );
 }
 
 sub network_from {
@@ -119,7 +123,7 @@ Where L</restart> sends its order, or L<WWW::iDRAC::Error::Unsupported>.
 =cut
 
 sub probe_info    { $_[0]->resource( Managers => 'info' ) }
-sub probe_network { $_[0]->linked_path( $_[0]->resource( Managers => 'network' ), EthernetInterfaces => 'network' ) }
+sub probe_network { $_[0]->_interface }
 sub probe_restart { $_[0]->reset_action }
 
 =method probe_info

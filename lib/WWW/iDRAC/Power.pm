@@ -136,7 +136,7 @@ True when it was reached, false when C<timeout> seconds have passed.
 
 sub _power_document {
   my ( $self, $method ) = @_;
-  return $self->fetch( $self->linked_path( $self->resource( Chassis => $method ), Power => $method ), $method );
+  return $self->linked_document( $self->resource( Chassis => $method ), Power => $method );
 }
 
 sub consumption {
@@ -177,7 +177,7 @@ sub probe_on          { $_[0]->reset_action('on') }
 sub probe_off         { $_[0]->reset_action('off') }
 sub probe_restart     { $_[0]->reset_action('restart') }
 sub probe_cycle       { $_[0]->reset_action('cycle') }
-sub probe_consumption { $_[0]->linked_path( $_[0]->resource( Chassis => 'consumption' ), Power => 'consumption' ) }
+sub probe_consumption { $_[0]->_power_document('consumption') }
 
 =method probe_state
 

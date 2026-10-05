@@ -72,6 +72,26 @@ subtest 'a controller that offers less' => sub {
   ok( !$manager_part->supports('network'), 'supports: no interfaces at all' );
 };
 
+subtest 'what is linked but not there' => sub {
+  my $fake = FakeiDRAC->new;
+  $fake->remove( $manager.'/EthernetInterfaces' );
+  my $part = idrac($fake)->manager;
+  isa_ok( error_of { $part->network }, 'WWW::iDRAC::Error::Unsupported', 'network, the collection is gone' );
+  ok( !$part->supports('network'), 'supports says the same' );
+
+  my $empty = FakeiDRAC->new;
+  $empty->doc( $manager.'/EthernetInterfaces' )->{Members} = [];
+  ok( !idrac($empty)->manager->supports('network'), 'supports: a collection without an interface' );
+
+  my $lost = FakeiDRAC->new;
+  delete $lost->doc($system)->{Links};
+  $lost->remove('/redfish/v1/Managers');
+  my $error = error_of { idrac($lost)->manager->info };
+  isa_ok( $error, 'WWW::iDRAC::Error::Unsupported', 'info, the collection of managers is gone' );
+  is( $error->capability, 'manager.info', 'names the capability' );
+  ok( !idrac($lost)->manager->supports('info'), 'supports says the same' );
+};
+
 is_deeply( \@warnings, [], 'no warnings' );
 
 done_testing;
