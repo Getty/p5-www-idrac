@@ -22,7 +22,8 @@ with 'WWW::iDRAC::Role::Capability';
 
 The two logs an iDRAC keeps: the system event log of the hardware and the
 lifecycle log of the controller. Both are found through the log services the
-manager lists, by their names C<Sel> and C<Lclog>.
+manager lists, by the name the service gives itself or the last part of its
+address: C<SEL> or C<Sel>, and C<LC> or C<Lclog>.
 
 C<limit> is the number of entries fetched, 50 unless given, taken from the
 front of the list as the controller serves it, which is newest first on an
@@ -30,12 +31,16 @@ iDRAC. The entries fetched are returned newest first.
 
 =cut
 
+# what a log service is called: an iDRAC 7 and 8 name theirs SEL and LC, and
+# serve them at .../LogServices/Sel and .../LogServices/Lclog
+my %NAMES = ( sel => [qw( sel )], lclog => [qw( lclog lc )] );
+
 sub service {
   my ( $self, $id, $method ) = @_;
   my $path = $self->linked_path( $self->resource( Managers => $method ), LogServices => $method );
   for my $service ( $self->fetch_members( $path, $method ) ) {
-    my $name = text( $service->{Id} ) // ( ( $service->{'@odata.id'} // '' ) =~ m{([^/]+)/?\z} )[0] // '';
-    return $service if lc $name eq $id;
+    my %called = map { lc $_ => 1 } grep { defined } text( $service->{Id} ), ( ( $service->{'@odata.id'} // '' ) =~ m{([^/]+)/?\z} )[0];
+    return $service if grep { $called{$_} } @{ $NAMES{$id} };
   }
   $self->unsupported( $method, 'the controller has no log service '.$id );
 }
@@ -63,7 +68,8 @@ sub entry_from {
     created    => text( $doc->{Created} ),
     severity   => defined $severity ? lc $severity : undef,
     message    => text( $doc->{Message} ),
-    message_id => text( $doc->{MessageId} )
+    # firmware 2.50 of an iDRAC 8 spells the key MessageID
+    message_id => text( $doc->{MessageId} ) // text( $doc->{MessageID} )
   };
 }
 

@@ -280,7 +280,54 @@ auf und trägt die Ergebnisse hier ein.
 | Welche Schlüssel aus Abschnitt 5 liefert iDRAC 7/8 tatsächlich? | Schlüssel ohne Quelle bleiben `undef`; fehlende ganze Ressourcen werden `Unsupported`. |
 | WS-Man oder racadm über SSH als zweiter Transport? | Entscheidung für Phase 2. Kriterium: Was deckt BIOS-Attribute, Jobs und Virtual Media auf beiden Geräten ab und liefert strukturierte Daten? |
 
+### Gemessen am 2026-10-05
+
+Beide Geräte wurden rein lesend aufgenommen (`t/idrac/record.pl`), danach lief
+`t/90-live-idrac.t` lesend gegen beide durch. Geschaltet wurde nichts: Beide sind
+Produktivmaschinen.
+
+| Frage | PowerEdge R720xd (iDRAC 7) | PowerEdge T330 (iDRAC 8) |
+|---|---|---|
+| Firmware, Redfish | 2.65.65.65, Redfish 1.4.0 | 2.50.50.50, Redfish 1.0.2 |
+| Modell des Managers | `12G Monolithic`, als iDRAC 7 erkannt | `13G Monolithic`, als iDRAC 8 erkannt |
+| TLS | TLS 1.2, ECDHE-RSA-AES256-GCM-SHA384 | TLS 1.2, DHE-RSA-AES256-GCM-SHA384 |
+| Service-Root | 200 mit und ohne Schrägstrich, kein Redirect | ebenso |
+| Lizenz über Redfish | kein Lizenz-Dokument im Baum | ebenso |
+| Sessions | `/redfish/v1/Sessions`, Timeout 1800 s | ebenso |
+| Logs | Dienste `SEL` und `LC` unter `LogServices/Sel` und `/Lclog`; Einträge inline, neueste zuerst | ebenso; der Schlüssel heißt hier `MessageID` |
+| Reset-Typen | `On ForceOff ForceRestart GracefulShutdown PushPowerButton Nmi` | `On ForceOff GracefulRestart PushPowerButton Nmi` |
+| Memory-Collection | vorhanden | fehlt |
+| Abgelaufen / behalten | 193 Dokumente in 98 s / 66 | 56 in 38 s / 40 |
+| Nicht erreichbar | `Storage/RAID.Integrated.1-1` (404) | `VirtualMedia` (403) |
+
+Was daraus folgt:
+
+- **Das Werkszertifikat** lässt sich mit `ssl_fingerprint` anpinnen; so liefen Aufnahme und
+  Live-Suite. Die Dist braucht keinen abgesenkten TLS-Standard.
+- **`license` bleibt `undef`**, bis Phase 2 einen anderen Weg hat.
+- **Session-Login und -Logout funktionieren**; nach den Läufen war auf beiden keine Session
+  offen. Wie viele Sessions ein Controller zulässt, wurde an den Produktivgeräten nicht
+  ausgereizt. Keep-Alive hat über 193 Anfragen gehalten.
+- **Schlüssel, die diese Controller nicht liefern,** stehen je Gerät in
+  `t/fixtures/<name>/expect.json`: `fqdn` des iDRAC (leer), `asset_tag` (nicht gesetzt),
+  `link_up` (kein `LinkStatus`), auf dem R720xd dazu `hostname`, `health` der
+  Netzwerkschnittstellen und `output_watts` der Netzteile.
+- **Drei Annahmen des Codes waren falsch** und sind korrigiert: der Name des
+  Lifecycle-Log-Dienstes (`LC`), die Schreibung `MessageID`, und die Netzteil-Leistung,
+  die der iDRAC 7 nur unter `InputRanges` nennt.
+- **Schalten:** `power->cycle` bietet keines der beiden an. Sanftes `off` fehlt auf dem
+  T330, sanftes `restart` auf dem R720xd. **Offen für Getty:** ob `off` und `restart` dort
+  ersatzweise `PushPowerButton` bzw. die harte Form senden sollen, oder ob `Unsupported`
+  die richtige Antwort bleibt.
+- **Zweiter Transport:** `VirtualMedia` antwortet auf dem T330 mit 403, was auf die
+  Lizenzstufe deutet. Die Entscheidung WS-Man oder racadm bleibt für Phase 2 offen.
+
 ### Vermutungen aus dem Review (2026-10-05)
+
+Stand nach der Messung: Die Reset-Typen stimmen für den T330 und nicht für den R720xd.
+`LinkStatus` fehlt auf beiden, die Memory-Collection auf dem T330. `Thermal` und `Power`
+liefern die Messwerte direkt, der Service-Root antwortet ohne Redirect. Die Zeilen zu 409
+und 503 sind ungeprüft, weil nichts geschaltet wurde.
 
 Der Review des gebauten Stands hat aus Dells Dokumentation Vermutungen über iDRAC 7/8 mit
 Firmware 2.x genannt. Sie sind nicht gemessen und nicht umgesetzt; Karte 1 prüft sie an

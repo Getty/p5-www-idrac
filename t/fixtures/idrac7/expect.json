@@ -1,0 +1,10 @@
+{
+   "empty" : [],
+   "undef" : {
+      "manager.network" : [ "fqdn" ],
+      "sensors.power_supplies" : [ "output_watts" ],
+      "system.info" : [ "asset_tag", "hostname" ],
+      "system.nics" : [ "health", "link_up" ]
+   },
+   "unsupported" : [ "power.cycle", "power.restart" ]
+}

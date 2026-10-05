@@ -4,11 +4,11 @@ WWW::iDRAC — synchronous Perl client for Dell iDRAC: inventory, power, sensors
 the controller itself, behind a facade cut by capability, not by protocol. Phase 1 fetches
 everything over Redfish. Moo-based; released to CPAN via Dist::Zilla `[@Author::GETTY]`.
 
-**Phase 1 is built, and has not met a real iDRAC yet.** Everything the code assumes about
-the field names of an iDRAC 7 (PowerEdge R720xd) or iDRAC 8 (PowerEdge T330) is an
-assumption until they are recorded: plan task 5 (recording both), step 3 of task 12 (every
-reading method against the recordings) and step 3 of task 13 (the live run) are open, and
-wait for the addresses and credentials in `~/.config/idrac/`. The design is
+**Phase 1 is built.** Everything that reads has run against an iDRAC 7 (PowerEdge R720xd,
+firmware 2.65) and an iDRAC 8 (PowerEdge T330, firmware 2.50), from recordings and live;
+what they answered is in section 9 of the spec. **Nothing that switches has run against
+hardware**: both machines are in production, so step 4 of plan task 13 is open and stays
+the maintainer's alone. The design is
 `docs/superpowers/specs/2026-10-04-www-idrac-design.md`, the plan
 `docs/superpowers/plans/2026-10-04-www-idrac-phase-1.md`. Phase 2 (a second transport for
 what Redfish lacks on iDRAC 7/8), the async twin `Net::Async::iDRAC` and phase 3

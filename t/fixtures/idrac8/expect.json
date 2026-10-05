@@ -1,0 +1,9 @@
+{
+   "empty" : [],
+   "undef" : {
+      "manager.network" : [ "fqdn" ],
+      "system.info" : [ "asset_tag" ],
+      "system.nics" : [ "link_up" ]
+   },
+   "unsupported" : [ "power.cycle", "power.off", "system.memory" ]
+}

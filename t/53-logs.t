@@ -92,6 +92,20 @@ subtest 'entries that are linked but not there' => sub {
   ok( $logs->supports('lifecycle'), 'and still yes for the other log' );
 };
 
+subtest 'what the real controllers call things' => sub {
+  # iDRAC 7 (2.65) and iDRAC 8 (2.50): the services are SEL and LC, at .../LogServices/Sel and .../LogServices/Lclog
+  my $fake = FakeiDRAC->new;
+  $fake->doc( $manager.'/LogServices/Sel' )->{Id}   = 'SEL';
+  $fake->doc( $manager.'/LogServices/Lclog' )->{Id} = 'LC';
+  my $logs = idrac($fake)->logs;
+  is( scalar @{ $logs->sel }, 3, 'the event log under the name SEL' );
+  is( scalar @{ $logs->lifecycle }, 3, 'the lifecycle log under the name LC' );
+  ok( $logs->supports('lifecycle'), 'supports agrees' );
+  # iDRAC 8 (2.50) spells the key with a capital D
+  is( WWW::iDRAC::Logs->entry_from( { MessageID => 'USR0030' } )->{message_id}, 'USR0030', 'the message id under the key MessageID' );
+  is( WWW::iDRAC::Logs->entry_from( { MessageId => 'a', MessageID => 'b' } )->{message_id}, 'a', 'the standard spelling first' );
+};
+
 is_deeply( \@warnings, [], 'no warnings' );
 
 done_testing;

@@ -91,6 +91,15 @@ subtest 'a system that is listed but not there' => sub {
   ok( !$sensors->supports('temperatures'), 'with no' );
 };
 
+subtest 'what the real controllers call things' => sub {
+  # iDRAC 7 (2.65) has no PowerCapacityWatts on a power supply; what it can deliver is in InputRanges
+  my $ps = WWW::iDRAC::Sensors->power_supply_from( { Name => 'PS1 Status', InputRanges => [ { InputType => 'AC', OutputWattage => 750 }, { InputType => 'DC', OutputWattage => 1100 }, 'x' ], PowerInputWatts => 900 } );
+  shape_ok( $ps, 'sensors.power_supplies' );
+  is( $ps->{capacity_watts}, 1100, 'the capacity from the input ranges, the largest of them' );
+  is( WWW::iDRAC::Sensors->power_supply_from( { PowerCapacityWatts => 495, InputRanges => [ { OutputWattage => 750 } ] } )->{capacity_watts}, 495, 'the field of its own first' );
+  is( WWW::iDRAC::Sensors->power_supply_from( { InputRanges => 'none' } )->{capacity_watts}, undef, 'undef where neither says anything' );
+};
+
 is_deeply( \@warnings, [], 'no warnings' );
 
 done_testing;

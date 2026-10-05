@@ -37,8 +37,11 @@ $idrac->logout;
 
 Everything goes over Redfish in this version. What a controller offers depends on its
 generation, firmware and license; a method it cannot serve throws
-`WWW::iDRAC::Error::Unsupported` before anything is sent. Written for iDRAC 7
-(PowerEdge R720xd) and iDRAC 8 (PowerEdge T330); **not yet run against either of them.**
+`WWW::iDRAC::Error::Unsupported` before anything is sent. Everything that reads has
+run against an iDRAC 7 (PowerEdge R720xd, firmware 2.65) and an iDRAC 8 (PowerEdge T330,
+firmware 2.50). **The methods that switch something have not been run against hardware
+yet.** Neither of the two offers a power cycle; the T330 offers no gentle `off`, the
+R720xd no gentle `restart`.
 
 ## Certificates
 

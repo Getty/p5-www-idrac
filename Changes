@@ -22,5 +22,8 @@ Revision history for WWW-iDRAC
     - A recorder that walks the Redfish tree of a controller with GET only,
       keeps the kinds of document the tests read and cleans those, as far as
       it can tell, of what names the machine, its network or a person
+    - Everything that reads has run against an iDRAC 7 (PowerEdge R720xd,
+      firmware 2.65) and an iDRAC 8 (PowerEdge T330, firmware 2.50); the
+      methods that switch something have not been run against hardware yet
     - Live tests against a real iDRAC behind IDRAC_HOST, read-only unless
       IDRAC_LIVE_DESTRUCTIVE is set

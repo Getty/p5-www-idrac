@@ -116,12 +116,14 @@ sub power_supplies {
 
 sub power_supply_from {
   my ( $class, $doc ) = @_;
+  # an iDRAC 7 says what a supply can deliver only per input range
+  my ( $largest ) = sort { $b <=> $a } grep { defined } map { number( $_->{OutputWattage} ) } list_of( $doc->{InputRanges} );
   return {
     name           => text( $doc->{Name} ),
     model          => text( $doc->{Model} ),
     serial         => text( $doc->{SerialNumber} ),
     firmware       => text( $doc->{FirmwareVersion} ),
-    capacity_watts => number( $doc->{PowerCapacityWatts} ),
+    capacity_watts => number( $doc->{PowerCapacityWatts} ) // $largest,
     input_volts    => number( $doc->{LineInputVoltage} ),
     output_watts   => number( $doc->{LastPowerOutputWatts} ) // number( $doc->{PowerOutputWatts} ),
     health         => health_of( $doc->{Status} )

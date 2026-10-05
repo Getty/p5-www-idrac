@@ -13,7 +13,7 @@ use lib 't/lib';
 # wrong name returns them all, undef. So each recording has an expect.json
 # beside it that says what this controller does not have:
 #
-#   { "unsupported": [ "system.memory" ],              methods that throw Unsupported
+#   { "unsupported": [ "system.memory", "power.cycle" ],   methods that throw Unsupported, the switching ones included
 #     "empty":       [ "logs.sel" ],                   methods that return an empty list
 #     "undef":       { "system.info": [ "asset_tag" ] } }   keys that are undef in every row
 #
@@ -32,7 +32,7 @@ my $JSON = JSON::MaybeXS->new( utf8 => 1, canonical => 1, pretty => 1 );
 my %controller = (
   'the invented controller' => {
     fake   => sub { FakeiDRAC->new },
-    expect => { unsupported => ['system.memory'], empty => [], undef => { 'system.info' => ['asset_tag'] } }
+    expect => { unsupported => [ 'power.cycle', 'system.memory' ], empty => [], undef => { 'system.info' => ['asset_tag'] } }
   }
 );
 for my $file ( sort glob 't/fixtures/*/redfish.json' ) {
@@ -75,8 +75,13 @@ for my $name ( sort keys %controller ) {
     }
 
     like( $idrac->power->state // 'undef', qr/\A[a-z_]+\z/, 'power.state' );
-    ok( defined eval { $idrac->capabilities->supports($_) }, $_.': supports answers' ) or diag $@
-      for qw( power.on power.off power.restart power.cycle logs.clear_sel manager.restart );
+    # the switching methods are only asked about, never called
+    for my $method (qw( power.on power.off power.restart power.cycle logs.clear_sel manager.restart )) {
+      my $offered = eval { $idrac->capabilities->supports($method) };
+      ok( defined $offered, $method.': supports answers' ) or diag $@;
+      push @{ $found{unsupported} }, $method if defined $offered && !$offered;
+    }
+    @{ $found{unsupported} } = sort @{ $found{unsupported} };
     is( scalar $fake->seen(qr/\A(?:POST(?! \S*Sessions\z)|PATCH|PUT)/), 0, 'reading changes nothing on the controller' );
     is_deeply( \@warnings, [], 'no warnings' );
 
