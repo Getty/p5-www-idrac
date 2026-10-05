@@ -71,6 +71,8 @@ subtest 'what is left out altogether' => sub {
   is( $entry->{Message}, 'Message text removed (USR0030).', 'and its text, which names users and the places they came from' );
   is( $entry->{Created}, '2026-10-01T12:30:45+02:00', 'the rest of the entry stays' );
   is( $entry->{MessageId}, 'USR0030', 'the message id with it' );
+  my $old = iDRACSanitize->new->sanitize( { '/l' => { Members => [ { Created => '2026-10-05T04:58:18+02:00', MessageID => 'USR0030', Message => 'Successfully logged in using jdoe.' } ] } } )->{'/l'}{Members}[0];
+  is( $old->{Message}, 'Message text removed (USR0030).', 'the id is named where the controller spells its key MessageID' );
 };
 
 subtest 'the same values inside other strings' => sub {
@@ -125,6 +127,27 @@ subtest 'a recording that was cleaned before' => sub {
   my $named    = $reserved->sanitize( { '/c' => { FQDN => 'idrac-7.lab.example.org', Note => 'mail to admin@example.org' } } );
   like( $named->{'/c'}{FQDN}, qr/\Afqdn-\d+\.example\.org\z/, 'a name under example.org is replaced like any other' );
   is_deeply( [ $reserved->leaks($named) ], [], 'and example.org itself, which the placeholders are made of, is no leak' );
+};
+
+subtest 'what a real controller showed' => sub {
+  # an iDRAC 7 names the hardware address of a network card inside its UEFI
+  # device path, and the user root is part of the word PciRoot
+  my %real = (
+    '/n' => { MACAddress => '9C:69:B4:61:2C:F0', UefiDevicePath => 'PciRoot(0x0)/Pci(0x3,0x0)/Pci(0x0,0x0)/MAC(9C69B4612CF0,0x0)', Note => 'user root logged in; rooted and uprooted stay' },
+    '/m' => { UefiDevicePath => 'PciRoot(0x0)/Pci(0x3,0x0)/Pci(0x0,0x1)/MAC(9c69b4612cf1,0x0)' }
+  );
+  my $s   = iDRACSanitize->new->hide( user => 'root' )->hide( host => 'kaiser' );
+  my $out = $s->sanitize( { %real, '/k' => { Note => 'kaiser, Kaiser-idrac and kaiserschmarrn' } } );
+  my ( $compact ) = $out->{'/n'}{UefiDevicePath} =~ m{\APciRoot\(0x0\)/Pci\(0x3,0x0\)/Pci\(0x0,0x0\)/MAC\(([0-9A-F]{12}),0x0\)\z};
+  ok( $compact, 'the path keeps its form, PciRoot included' ) or diag $out->{'/n'}{UefiDevicePath};
+  like( $compact // '', qr/\A00005E0053/, 'and its hardware address is one from the documentation range' );
+  ( my $colons = $out->{'/n'}{MACAddress} ) =~ tr/://d;
+  is( $compact, $colons, 'the same one the address has where it is written with colons' );
+  unlike( $out->{'/m'}{UefiDevicePath}, qr/9c69b4/i, 'in lower case too' );
+  is( $out->{'/n'}{Note}, 'user user-1 logged in; rooted and uprooted stay', 'a user name is replaced as a word, not inside other words' );
+  is( $out->{'/k'}{Note}, 'host-1, host-1-idrac and kaiserschmarrn', 'and so is a host name' );
+  is_deeply( [ $s->leaks($out) ], [], 'nothing is left' );
+  is_deeply( [ $s->leaks( { '/x' => { Path => 'PciRoot(0x0)' } } ) ], [], 'and PciRoot is no leak of the user root' );
 };
 
 subtest 'the controller reached by its address' => sub {

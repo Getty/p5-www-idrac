@@ -18,7 +18,8 @@ package iDRACSanitize;
 #   2. Rewrite every string: a collected value becomes its placeholder, also
 #      inside other strings; names under a collected domain, e-mail
 #      addresses, UUIDs, MAC and IP addresses become placeholders from the
-#      documentation ranges.
+#      documentation ranges. A user or host name is replaced as a word only:
+#      the user root is no part of "PciRoot".
 #   3. Leave out what nobody has looked at or what is free text about people:
 #      the keys in %DROP, and the text of log messages.
 #
@@ -73,6 +74,9 @@ my %FORMAT = (
   ipv4   => sub { sprintf '192.0.2.%d', $_[0] % 256 },
   ipv6   => sub { sprintf '2001:db8::%x', $_[0] }
 );
+
+# the kinds whose values are ordinary words and are searched for as words
+my %WORD = map { $_ => 1 } qw( user host );
 
 sub new { bless { map => {}, kind => {}, count => {}, named => {} }, $_[0] }
 
@@ -140,8 +144,9 @@ sub _rewrite {
   if ( ref $node eq 'HASH' ) {
     my %out = map { $_ => $self->_rewrite( $node->{$_}, $_ ) } grep { !$DROP{$_} } sort keys %$node;
     # the text of a log entry names users and where they came from
-    $out{Message} = 'Message text removed'.( _is_string( $node->{MessageId} ) ? ' ('.$node->{MessageId}.')' : '' ).'.'
-      if _is_string( $node->{Message} ) && ( exists $node->{MessageId} || exists $node->{Created} );
+    my ( $id ) = grep { _is_string($_) } @{$node}{qw( MessageId MessageID )};
+    $out{Message} = 'Message text removed'.( defined $id ? ' ('.$id.')' : '' ).'.'
+      if _is_string( $node->{Message} ) && ( defined $id || exists $node->{Created} );
     return \%out;
   }
   return [ map { $self->_rewrite( $_, $key ) } @$node ] if ref $node eq 'ARRAY';
@@ -157,15 +162,26 @@ sub _rewrite_string {
   return $map->{ lc $text } if $self->{named}{ lc $text };
   if ( my $domains = $self->{domains} ) { $text =~ s{((?:[A-Za-z0-9-]+\.)+(?:$domains))(?![A-Za-z0-9-])}{ $self->placeholder( fqdn => $1 ) }gie }
   if ( my $known   = $self->{known} )   { $text =~ s{($known)}{ $map->{ lc $1 } }gie }
+  if ( my $words   = $self->{words} )   { $text =~ s{(?<![A-Za-z0-9])($words)(?![A-Za-z0-9])}{ $map->{ lc $1 } }gie }
   $text =~ s{([A-Za-z0-9._%+-]+\@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)}{ $self->placeholder( email => $1 ) }ge;
   $text =~ s{\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b}{ $self->_unless_placeholder( uuid => $1, qr/\A0{8}-/ ) }gie;
   # six groups are a MAC address, eight a WWN
   $text =~ s{\b((?:[0-9A-Fa-f]{2}[:-]){5,7}[0-9A-Fa-f]{2})\b}{ $self->_unless_placeholder( mac => uc $1, qr/\A00:00:5E:00:53:/ ) }ge;
-  $text = $self->placeholder( mac => uc join ':', $text =~ /(..)/g ) if $key =~ /mac/i && $text =~ /\A[0-9A-Fa-f]{12}\z/;
+  # and without separators, where a key says so or a UEFI device path does
+  $text = $self->_mac_compact($text) if $key =~ /mac/i && $text =~ /\A[0-9A-Fa-f]{12}\z/;
+  $text =~ s{\bMAC\(([0-9A-Fa-f]{12})\b}{ 'MAC('.$self->_mac_compact($1) }gie;
   # a firmware version has the form of an IPv4 address
   $text =~ s{(?<![0-9.])((?:[0-9]{1,3}\.){3}[0-9]{1,3})(?![0-9]|\.[0-9])}{ $self->_ipv4($1) }ge unless $key =~ /version|firmware/i;
   $text =~ s{(?<![0-9A-Za-z:])([0-9A-Fa-f:]{2,39})(?![0-9A-Za-z:])}{ $self->_ipv6($1) }ge;
   return $text;
+}
+
+# the placeholder of a MAC address written without separators, written the same way
+sub _mac_compact {
+  my ( $self, $hex ) = @_;
+  my $placeholder = $self->_unless_placeholder( mac => uc join( ':', $hex =~ /(..)/g ), qr/\A00:00:5E:00:53:/ );
+  $placeholder =~ tr/://d;
+  return $placeholder;
 }
 
 # a value that is one of ours already stays; a match inside the replacement
@@ -197,7 +213,8 @@ sub sanitize {
   # longest first, so that a value inside another does not break it up
   my $alternatives = sub { join( '|', map { quotemeta } sort { length $b <=> length $a || $a cmp $b } @_ ) || undef };
   my @named = keys %{ $self->{named} };
-  $self->{known}   = $alternatives->( grep { length >= 4 } @named );
+  $self->{known}   = $alternatives->( grep { length >= 4 && !$WORD{ $self->{kind}{$_} } } @named );
+  $self->{words}   = $alternatives->( grep { length >= 4 && $WORD{ $self->{kind}{$_} } } @named );
   $self->{domains} = $alternatives->( grep { $self->{kind}{$_} eq 'domain' } @named );
   return { map { $_ => $self->_rewrite( $docs->{$_}, '' ) } sort keys %$docs };
 }
@@ -214,8 +231,8 @@ sub leaks {
   my $look = sub {
     my ( $text ) = @_;
     for my $needle (@needles) {
-      next unless length $needle >= 4 ? $text =~ /(?<![A-Za-z0-9])\Q$needle\E(?![A-Za-z0-9])/i : lc $text eq $needle;
       my $kind = $self->{kind}{$needle};
+      next unless length $needle < 4 ? lc $text eq $needle : $WORD{$kind} ? $text =~ /(?<![A-Za-z0-9])\Q$needle\E(?![A-Za-z0-9])/i : $text =~ /\Q$needle\E/i;
       $found{ ( $kind =~ /\A[aeiou]/ ? 'an ' : 'a ' ).$kind.' in '.$path } = 1;
     }
   };
