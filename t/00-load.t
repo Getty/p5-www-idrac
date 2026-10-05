@@ -10,6 +10,7 @@ for (qw(
   WWW::iDRAC::Error::Network
   WWW::iDRAC::Error::Unsupported
   WWW::iDRAC::Error::Validation
+  WWW::iDRAC::Power
   WWW::iDRAC::Redfish
   WWW::iDRAC::Role::Capability
   WWW::iDRAC::Role::HTTP

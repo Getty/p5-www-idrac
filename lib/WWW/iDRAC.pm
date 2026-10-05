@@ -10,6 +10,7 @@ use WWW::iDRAC::Error::API;
 use WWW::iDRAC::Error::Network;
 use WWW::iDRAC::Error::Unsupported;
 use WWW::iDRAC::Error::Validation;
+use WWW::iDRAC::Power;
 use WWW::iDRAC::Redfish;
 use WWW::iDRAC::System;
 use namespace::autoclean;
@@ -227,6 +228,16 @@ sub _build_system { WWW::iDRAC::System->new( redfish => $_[0]->redfish ) }
 =attr system
 
 L<WWW::iDRAC::System>: inventory and state of the server.
+
+=cut
+
+has power => ( is => 'lazy' );
+
+sub _build_power { WWW::iDRAC::Power->new( redfish => $_[0]->redfish ) }
+
+=attr power
+
+L<WWW::iDRAC::Power>: switching the server, and what it draws.
 
 =cut
 
