@@ -8,9 +8,17 @@ use lib 't/lib';
 # IDRAC_PASSWORD are set. IDRAC_SSL_FINGERPRINT pins the certificate,
 # IDRAC_VERIFY_SSL=0 accepts any.
 #
-# As it is, the test only reads. With IDRAC_LIVE_DESTRUCTIVE=1 it also empties
-# the system event log, switches the server off and on again and restarts the
-# controller. That hits a real machine: do not set it for one that is in use.
+# As it is, the test only reads. With IDRAC_LIVE_DESTRUCTIVE=1, exactly that
+# value, it also empties the system event log, switches the server off and on
+# again and restarts the controller. That hits a real machine: do not set it
+# for one that is in use.
+#
+# The server is switched off by asking its operating system. Where the
+# controller does not offer that, the switching is skipped, unless
+# IDRAC_LIVE_FORCE_OFF=1 allows cutting the power instead.
+#
+# Whatever happens on the way, the test tries to leave the server in the
+# power state it found it in.
 
 BEGIN {
   plan skip_all => 'set IDRAC_HOST, IDRAC_USERNAME and IDRAC_PASSWORD to run the iDRAC live test'
@@ -26,11 +34,25 @@ my $idrac = WWW::iDRAC->new(
   username => $ENV{IDRAC_USERNAME},
   password => $ENV{IDRAC_PASSWORD},
   ( $ENV{IDRAC_SSL_FINGERPRINT} ? ( ssl_fingerprint => $ENV{IDRAC_SSL_FINGERPRINT} ) : () ),
-  verify_ssl => $ENV{IDRAC_VERIFY_SSL} // 1
+  # only an explicit 0 turns the check off; an empty or mistyped value does not
+  verify_ssl => ( $ENV{IDRAC_VERIFY_SSL} // '' ) eq '0' ? 0 : 1
 );
 my $cap = $idrac->capabilities;
 
-END { eval { $idrac->logout } if $idrac }
+# the power state the server was found in, from the moment the test starts switching
+my $found;
+
+END {
+  if ( $idrac && $found ) {
+    my $now = eval { $idrac->power->state } // 'unknown';
+    if ( $now ne $found ) {
+      diag 'the server was '.$found.' when the test began and is '.$now.' now: putting it back';
+      eval { $found eq 'on' ? $idrac->power->on : $idrac->power->off( force => 1 ); 1 }
+        or diag 'THAT FAILED, LOOK AFTER THE SERVER BY HAND: '.$@;
+    }
+  }
+  eval { $idrac->logout } if $idrac;
+}
 
 sub unsupported { blessed $_[0] && $_[0]->isa('WWW::iDRAC::Error::Unsupported') }
 
@@ -52,7 +74,7 @@ subtest 'reading' => sub {
     }
     else {
       my $error = $@;
-      ok( unsupported($error), $method.': not on this controller' ) or diag $error;
+      ok( unsupported($error), $method.': not on this controller' );
       diag $error;
       ok( !$cap->supports($method), $method.': supports agrees' );
     }
@@ -81,7 +103,8 @@ subtest 'sessions' => sub {
 };
 
 subtest 'changing things' => sub {
-  plan skip_all => 'set IDRAC_LIVE_DESTRUCTIVE=1 to empty the event log, switch the server and restart the controller' unless $ENV{IDRAC_LIVE_DESTRUCTIVE};
+  plan skip_all => 'set IDRAC_LIVE_DESTRUCTIVE=1 to empty the event log, switch the server and restart the controller'
+    unless ( $ENV{IDRAC_LIVE_DESTRUCTIVE} // '' ) eq '1';
 
   SKIP: {
     skip 'logs.clear_sel is not on this controller', 2 unless $cap->supports('logs.clear_sel');
@@ -95,14 +118,22 @@ subtest 'changing things' => sub {
     skip 'the server is neither on nor off but '.$start, 4 unless $start eq 'on' || $start eq 'off';
     skip 'power.on is not on this controller', 4 unless $cap->supports('power.on');
     my $gentle = $cap->supports('power.off');
+    my $force  = ( $ENV{IDRAC_LIVE_FORCE_OFF} // '' ) eq '1';
+    skip 'power.off is not on this controller; set IDRAC_LIVE_FORCE_OFF=1 to cut the power instead', 4 unless $gentle || $force;
     diag 'power.off is not on this controller, the power is cut instead' unless $gentle;
     my %step = (
       off => sub { $gentle ? $power->off : $power->off( force => 1 ) },
       on  => sub { $power->on }
     );
+    $found = $start;
     for my $want ( $start eq 'on' ? qw( off on ) : qw( on off ) ) {
       is( $step{$want}->(), 1, 'power '.$want );
-      ok( $power->wait_for( $want, timeout => 600, interval => 10 ), 'the server is '.$want );
+      my $reached = $power->wait_for( $want, timeout => 600, interval => 10 );
+      ok( $reached, 'the server is '.$want );
+      next if $reached;
+      diag 'the server did not get '.$want.' in ten minutes and may still be on its way: THE TEST STOPS SWITCHING HERE, LOOK AFTER THE SERVER BY HAND';
+      undef $found;
+      last;
     }
   }
 
