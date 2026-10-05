@@ -1,4 +1,26 @@
 Revision history for WWW-iDRAC
 
 {{$NEXT}}
-    - Distribution skeleton
+    - Facade WWW::iDRAC for one controller: host, credentials, TLS options
+    - WWW::iDRAC::Redfish: the transport and the way to everything the facade
+      does not cover; session login, one new login when the token is refused,
+      collections with and without embedded entries, the session ended when
+      the object goes away
+    - WWW::iDRAC::System: info, processors, memory, nics
+    - WWW::iDRAC::Power: state, on, off, restart, cycle, wait_for, consumption
+    - WWW::iDRAC::Sensors: temperatures, fans, voltages, power supplies
+    - WWW::iDRAC::Logs: the system event log and the lifecycle log, clear_sel
+    - WWW::iDRAC::Manager: info, network, restart
+    - WWW::iDRAC::Capabilities: generation, model, firmware, Redfish version,
+      and supports('area.method'), answered from what the controller offers
+    - All methods return hashes with fixed keys, never Redfish documents; a
+      key the controller has nothing for is there and undef
+    - WWW::iDRAC::Error with ::Validation, ::Network, ::API and ::Unsupported;
+      what a controller does not have is Unsupported before anything is sent
+    - Certificates are verified by default; ssl_fingerprint pins the
+      self-signed certificate an iDRAC ships with
+    - A recorder that walks the Redfish tree of a controller with GET only
+      and cleans what it writes to t/fixtures/ of everything that names the
+      machine or its network
+    - Live tests against a real iDRAC behind IDRAC_HOST, read-only unless
+      IDRAC_LIVE_DESTRUCTIVE is set
