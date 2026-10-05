@@ -11,6 +11,7 @@ for (qw(
   WWW::iDRAC::Error::Unsupported
   WWW::iDRAC::Error::Validation
   WWW::iDRAC::Logs
+  WWW::iDRAC::Manager
   WWW::iDRAC::Power
   WWW::iDRAC::Redfish
   WWW::iDRAC::Role::Capability
