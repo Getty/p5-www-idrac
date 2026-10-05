@@ -5,6 +5,7 @@ package WWW::iDRAC;
 use Moo;
 use LWP::UserAgent;
 use Types::Standard qw( Bool HashRef InstanceOf Int Str );
+use WWW::iDRAC::Capabilities;
 use WWW::iDRAC::Error;
 use WWW::iDRAC::Error::API;
 use WWW::iDRAC::Error::Network;
@@ -271,6 +272,22 @@ sub _build_manager { WWW::iDRAC::Manager->new( redfish => $_[0]->redfish ) }
 =attr manager
 
 L<WWW::iDRAC::Manager>: the iDRAC itself.
+
+=cut
+
+has capabilities => ( is => 'lazy' );
+
+sub _build_capabilities {
+  my ( $self ) = @_;
+  return WWW::iDRAC::Capabilities->new(
+    redfish => $self->redfish,
+    areas   => { map { $_ => $self->$_ } qw( system power sensors logs manager ) }
+  );
+}
+
+=attr capabilities
+
+L<WWW::iDRAC::Capabilities>: what this controller is and what it can do.
 
 =cut
 

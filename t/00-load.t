@@ -5,6 +5,7 @@ use Test::More;
 
 for (qw(
   WWW::iDRAC
+  WWW::iDRAC::Capabilities
   WWW::iDRAC::Error
   WWW::iDRAC::Error::API
   WWW::iDRAC::Error::Network
