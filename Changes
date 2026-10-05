@@ -19,8 +19,8 @@ Revision history for WWW-iDRAC
       what a controller does not have is Unsupported before anything is sent
     - Certificates are verified by default; ssl_fingerprint pins the
       self-signed certificate an iDRAC ships with
-    - A recorder that walks the Redfish tree of a controller with GET only
-      and cleans what it writes to t/fixtures/ of everything that names the
-      machine or its network
+    - A recorder that walks the Redfish tree of a controller with GET only,
+      keeps the kinds of document the tests read and cleans those, as far as
+      it can tell, of what names the machine, its network or a person
     - Live tests against a real iDRAC behind IDRAC_HOST, read-only unless
       IDRAC_LIVE_DESTRUCTIVE is set

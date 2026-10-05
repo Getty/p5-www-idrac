@@ -1,9 +1,15 @@
 package iDRACRecorder;
 
 # Walks the Redfish tree of a controller with GET requests only and returns
-# what it found as a map of path to document, the form FakeiDRAC serves.
+# what it keeps of it as a map of path to document, the form FakeiDRAC serves.
 #
-#   my $docs = iDRACRecorder->new( redfish => $redfish )->record;
+#   my $recorder = iDRACRecorder->new( redfish => $redfish );
+#   my $docs     = $recorder->record;
+#
+# Everything is walked, so that the summary can say what a controller has.
+# Kept are only the kinds of document the tests read, told by @odata.type. A
+# controller holds a great deal more, user names and SNMP communities among
+# it, and what is not kept cannot end up in a public fixture.
 
 use strict;
 use warnings;
@@ -13,6 +19,18 @@ use warnings;
 # and certificates
 my $SKIP = qr{/(?:JSONSchemas|JsonSchemas|Registries|\$metadata|odata|AccountService|SessionService|Sessions|CertificateService|Certificates|Subscriptions)(?:/|\z)};
 
+# the resource types that are kept
+my %KEEP = map { $_ => 1 } qw(
+  ServiceRoot
+  ComputerSystemCollection ComputerSystem
+  ProcessorCollection Processor
+  MemoryCollection Memory
+  EthernetInterfaceCollection EthernetInterface
+  ChassisCollection Chassis Thermal Power
+  ManagerCollection Manager
+  LogServiceCollection LogService LogEntryCollection LogEntry
+);
+
 sub new {
   my ( $class, %arg ) = @_;
   return bless {
@@ -20,12 +38,30 @@ sub new {
     max_docs    => $arg{max_docs}    // 500,
     max_members => $arg{max_members} // 20,
     skipped     => [],
-    failed      => {}
+    failed      => {},
+    walked      => {},
+    truncated   => 0
   }, $class;
 }
 
-sub skipped { $_[0]{skipped} }
-sub failed  { $_[0]{failed} }
+sub skipped   { $_[0]{skipped} }
+sub failed    { $_[0]{failed} }
+sub walked    { $_[0]{walked} }       # path => resource type, for everything that was fetched
+sub truncated { $_[0]{truncated} }    # addresses still to walk when max_docs was reached
+
+# the paths that were fetched and not kept
+sub left_out {
+  my ( $self ) = @_;
+  return grep { !$KEEP{ $self->{walked}{$_} } } sort keys %{ $self->{walked} };
+}
+
+# "#ComputerSystem.v1_0_2.ComputerSystem" and the older
+# "#ComputerSystem.1.0.0.ComputerSystem" are both a ComputerSystem
+sub type_of {
+  my ( $class, $doc ) = @_;
+  my ( $type ) = ( $doc->{'@odata.type'} // '' ) =~ /\A#?([A-Za-z0-9]+)/;
+  return $type // '(no type)';
+}
 
 sub key {
   my ( $class, $path ) = @_;
@@ -61,18 +97,21 @@ sub record {
   my ( $self ) = @_;
   my ( %docs, %seen );
   my @queue = ('/redfish/v1/');
-  while ( @queue && keys %docs < $self->{max_docs} ) {
+  while (@queue) {
+    if ( keys %{ $self->{walked} } >= $self->{max_docs} ) { $self->{truncated} = grep { !$seen{ $self->key($_) } } @queue; last }
     my $key = $self->key( shift @queue );
     next if $seen{$key}++;
     if ( $key =~ $SKIP ) { push @{ $self->{skipped} }, $key; next }
     my $doc;
     if ( !eval { $doc = $self->{redfish}->get($key); 1 } ) { $self->{failed}{$key} = "$@"; next }
     next unless ref $doc eq 'HASH';
-    $docs{$key} = $self->trim($doc);
+    $doc = $self->trim($doc);
+    my $type = $self->{walked}{$key} = $self->type_of($doc);
+    $docs{$key} = $doc if $KEEP{$type};
     # an entry that came whole inside its collection is not fetched once more
     $seen{ $self->key( $_->{'@odata.id'} ) }++
-      for grep { ref $_ eq 'HASH' && keys %$_ > 1 && defined $_->{'@odata.id'} } ref $docs{$key}{Members} eq 'ARRAY' ? @{ $docs{$key}{Members} } : ();
-    push @queue, $self->links( $docs{$key} );
+      for grep { ref $_ eq 'HASH' && keys %$_ > 1 && defined $_->{'@odata.id'} } ref $doc->{Members} eq 'ARRAY' ? @{ $doc->{Members} } : ();
+    push @queue, $self->links($doc);
   }
   return \%docs;
 }

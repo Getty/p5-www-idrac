@@ -212,7 +212,37 @@ sub request {
   return $self->_error( 405, 'Base.1.0.GeneralError', 'Method not allowed.', 'Use a supported method.' );
 }
 
+# what kind of document is at a path of the invented controller
+my @TYPE = (
+  [ qr{\A/redfish/v1\z}                          => '#ServiceRoot.1.0.0.ServiceRoot' ],
+  [ qr{/Systems\z}                                => '#ComputerSystemCollection.ComputerSystemCollection' ],
+  [ qr{/Systems/[^/]+\z}                          => '#ComputerSystem.v1_0_2.ComputerSystem' ],
+  [ qr{/Processors\z}                             => '#ProcessorCollection.ProcessorCollection' ],
+  [ qr{/Processors/[^/]+\z}                       => '#Processor.v1_0_2.Processor' ],
+  [ qr{/EthernetInterfaces\z}                     => '#EthernetInterfaceCollection.EthernetInterfaceCollection' ],
+  [ qr{/EthernetInterfaces/[^/]+\z}               => '#EthernetInterface.v1_0_2.EthernetInterface' ],
+  [ qr{/Chassis\z}                                => '#ChassisCollection.ChassisCollection' ],
+  [ qr{/Chassis/[^/]+\z}                          => '#Chassis.v1_0_2.Chassis' ],
+  [ qr{/Thermal\z}                                => '#Thermal.v1_0_2.Thermal' ],
+  [ qr{/Power\z}                                  => '#Power.v1_0_2.Power' ],
+  [ qr{/Managers\z}                               => '#ManagerCollection.ManagerCollection' ],
+  [ qr{/Managers/[^/]+\z}                         => '#Manager.v1_0_2.Manager' ],
+  [ qr{/LogServices\z}                            => '#LogServiceCollection.LogServiceCollection' ],
+  [ qr{/LogServices/[^/]+\z}                      => '#LogService.v1_0_2.LogService' ],
+  [ qr{/Logs/[^/?]+(?:\?.*)?\z}                   => '#LogEntryCollection.LogEntryCollection' ],
+  [ qr{/Logs/[^/]+/[^/]+\z}                       => '#LogEntry.v1_0_2.LogEntry' ]
+);
+
 sub default_docs {
+  my $docs = $_[0]->_default_docs;
+  for my $path ( keys %$docs ) {
+    my ( $type ) = map { $_->[1] } grep { $path =~ $_->[0] } @TYPE;
+    $docs->{$path}{'@odata.type'} = $type if $type;
+  }
+  return $docs;
+}
+
+sub _default_docs {
   my $system  = '/redfish/v1/Systems/System.Embedded.1';
   my $chassis = '/redfish/v1/Chassis/System.Embedded.1';
   my $manager = '/redfish/v1/Managers/iDRAC.Embedded.1';

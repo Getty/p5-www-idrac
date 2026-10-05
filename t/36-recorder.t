@@ -43,6 +43,26 @@ subtest 'what is not walked' => sub {
   ok( exists $docs->{ $manager.'/Logs/Lclog/1' }, 'to the end' );
 };
 
+subtest 'only the kinds of document the tests read are kept' => sub {
+  my $fake = FakeiDRAC->new;
+  $fake->doc($manager)->{Links} = { Attributes => { '@odata.id' => $manager.'/Attributes' } };
+  $fake->{docs}{ $manager.'/Attributes' } = {
+    '@odata.type' => '#DellAttributes.v1_0_0.DellAttributes',
+    Attributes    => { 'Users.3.UserName' => 'jdoe', 'SNMP.1.AgentCommunity' => 's3cr3t' },
+    Links         => { More => { '@odata.id' => $manager.'/Attributes/More' } }
+  };
+  $fake->{docs}{ $manager.'/Attributes/More' } = { Note => 'a document that does not say what it is' };
+  my $recorder = recorder($fake);
+  my $docs     = $recorder->record;
+  ok( !exists $docs->{ $manager.'/Attributes' }, 'a kind of document nobody has looked at is not kept' );
+  ok( !exists $docs->{ $manager.'/Attributes/More' }, 'nor one that does not say what it is' );
+  is_deeply( [ sort keys %$docs ], [ sort keys %{ FakeiDRAC->default_docs } ], 'everything else is' );
+  is( $recorder->walked->{ $manager.'/Attributes' }, 'DellAttributes', 'but it was walked, and its kind noted' );
+  is( $recorder->walked->{ $manager.'/Attributes/More' }, '(no type)', 'and what it points to as well' );
+  is( $recorder->walked->{'/redfish/v1'}, 'ServiceRoot', 'a type in the old notation is read too' );
+  is_deeply( [ $recorder->left_out ], [ $manager.'/Attributes', $manager.'/Attributes/More' ], 'what was left out is listed' );
+};
+
 subtest 'limits' => sub {
   my $fake = FakeiDRAC->new;
   $fake->doc( $manager.'/Logs/Sel' )->{Members} = [ map { { '@odata.id' => $manager.'/Logs/Sel/'.$_, Id => "$_" } } 1 .. 30 ];
@@ -52,7 +72,12 @@ subtest 'limits' => sub {
   is( $sel->{'Members@odata.count'}, 5, 'and its count says so' );
   my $log = recorder( FakeiDRAC->new, max_members => 1 )->record->{ $manager.'/Logs/Lclog' };
   ok( !exists $log->{'Members@odata.nextLink'}, 'a cut collection has no next page' );
-  is( scalar keys %{ recorder( FakeiDRAC->new, max_docs => 4 )->record }, 4, 'the number of documents is capped' );
+  my $short = recorder( FakeiDRAC->new, max_docs => 4 );
+  is( scalar keys %{ $short->record }, 4, 'the number of documents is capped' );
+  cmp_ok( $short->truncated, '>', 0, 'and the recorder says that it stopped with addresses still to walk' );
+  my $whole = recorder( FakeiDRAC->new );
+  $whole->record;
+  is( $whole->truncated, 0, 'which it does not say after a whole walk' );
 };
 
 done_testing;
