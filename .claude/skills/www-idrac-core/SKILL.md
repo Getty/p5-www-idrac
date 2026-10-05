@@ -41,8 +41,15 @@ HTTP role, error objects. The design is
 - **Nothing about the controller is coded from memory.** What a real iDRAC answers is in
   `t/fixtures/<name>/redfish.json`, recorded with `t/idrac/record.pl`. The default
   documents of `t/lib/FakeiDRAC.pm` are invented and say so.
-- **Fixtures are public.** They go through `iDRACSanitize` and are read by a person
-  before they are committed. No service tag, serial number, MAC, address or host name.
+- **Fixtures are public.** The recorder keeps only the kinds of document the tests read;
+  those go through `iDRACSanitize` and are read by a person before they are committed.
+  No service tag, serial number, MAC, address, host name or user name. Widening what is
+  kept (`%KEEP` in `t/lib/iDRACRecorder.pm`) means reading what that kind of document
+  holds first.
+- **Every recording has an `expect.json`** saying what that controller lacks. A key that
+  is `undef` in every row is either listed there or a bug.
+- **A session is ended by whoever opened it**: on `logout`, when the transport goes away,
+  and at the end of the program. Nothing may leave one behind.
 - **TLS verification is on by default**, and the dist never lowers TLS versions or ciphers.
 - **The password is in no error message and no fixture.**
 

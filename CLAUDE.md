@@ -60,7 +60,12 @@ IDRAC_HOST=... IDRAC_USERNAME=... IDRAC_PASSWORD=... IDRAC_SSL_FINGERPRINT='sha2
 ```
 
 `IDRAC_LIVE_DESTRUCTIVE=1` makes the live suite empty the event log, switch the server
-off and on and restart the controller. Never set it yourself; it hits a real machine.
+off and on and restart the controller; `IDRAC_LIVE_FORCE_OFF=1` lets it cut the power
+where the controller offers no gentle shutdown. Never set either yourself; they hit a
+real machine.
+
+A recording is only committed after a person has read it, and with an `expect.json`
+beside it that says what the controller lacks; `t/85-fixtures.t` prints a first version.
 
 `LICENSE` is committed, not generated at build time; re-run `dzil genlicense` and
 `git add LICENSE` after changing license, holder or year in `dist.ini`.

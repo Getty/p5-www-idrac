@@ -10,6 +10,21 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-04-www-idrac-design.md` (freigegeben 2026-10-04). Bis Aufgabe 1 liegt sie im Hub `~/dev/perl-developer`, danach in der Dist.
 
+## Ausgeführt am 2026-10-05
+
+Aufgaben 1 bis 4 und 6 bis 11 sind vollständig umgesetzt, ein Commit pro Aufgabe (`56a8192` bis `e50bbd2`); von Aufgabe 12 der Test, von Aufgabe 13 Live-Suite und Dokumentation (`a7b1576`, `7af422f`). **Offen sind Aufgabe 5, Step 3 von Aufgabe 12 und Step 3 und 4 von Aufgabe 13**: Sie brauchen die beiden Geräte.
+
+Danach hat ein unabhängiger Review des ganzen Stands einen kritischen und sieben wichtige Befunde gebracht, die in fünf eigenen Commits behoben sind (`05b3ff5` bis `cf275b3`). **Der Code im Repo weicht dort von den Listings unten ab; maßgeblich ist das Repo.** Was sich geändert hat:
+
+- **Sessions.** Offene Sessions werden in einem `END`-Block beendet, weil ein Client in einer dateiweiten Variable bis in die globale Zerstörung lebt und das Logout dort scheiterte. Ein 401, der nicht an der Session liegt, hinterlässt keine Session mehr pro Anfrage. Ein `logout`, das der Controller ablehnt, wirft nicht.
+- **Transport.** Eine Erfolgsantwort, deren Body kein JSON ist, ist ein `Error::API`. `locate` merkt sich keinen Fehltreffer. Der User-Agent folgt keinem Redirect (`max_redirect => 0`), weil der Token oder das Passwort mitginge. Folge für Aufgabe 5: Antwortet ein iDRAC auf `/redfish/v1/` mit einem Redirect, zeigt sich das dort als `Error::API` mit Status 30x.
+- **`supports`.** Die Proben holen das Dokument hinter dem Link, nicht nur den Link; `supports` und Methode sagen jetzt dasselbe. Ein 404 auf dem Weg zu System, Chassis oder Manager und eine Antwort, die kein Dokument ist, werden `Unsupported`.
+- **Aufnahmen.** Der Recorder behält nur noch die Dokumentarten, die die Tests lesen (nach `@odata.type`); alles andere wird für die Zusammenfassung abgelaufen und verworfen. Die Bereinigung lässt `Oem`, `Location` und den Text von Log-Meldungen weg, erkennt Schlüssel an ihrem letzten Punkt-Bestandteil (`Users.3.UserName`), findet benannte Werte unabhängig von der Schreibung, lässt Zahlen Zahlen sein und meldet Lecks als Art und Dokument statt die Werte auszugeben.
+- **Fixture-Test.** Jede Aufnahme braucht ein `expect.json` daneben, das sagt, was der Controller nicht hat; ohne die Datei scheitert der Test und druckt, was er gefunden hat (siehe Aufgabe 12).
+- **Live-Suite.** Der schaltende Teil verlangt genau `IDRAC_LIVE_DESTRUCTIVE=1`, schaltet den Strom nur mit `IDRAC_LIVE_FORCE_OFF=1` hart ab und stellt den vorgefundenen Zustand wieder her.
+
+Nicht umgesetzt, sondern für Aufgabe 5 vorgemerkt: die Vermutungen des Reviews über das Verhalten von iDRAC 7/8 (Spec-Abschnitt 9, zweite Tabelle).
+
 ## Stand des Codes in diesem Plan
 
 Der gesamte Code dieses Plans ist am 2026-10-04 als Wegwerf-Prototyp gelaufen, Aufgabe für Aufgabe in der Reihenfolge unten aufgebaut: `prove -lr t` war nach jeder Stufe grün, am Ende 16 Dateien und 92 Tests. Zusätzlich geprüft:
@@ -2430,9 +2445,9 @@ Getty nennt die beiden Adressen und legt je Gerät eine Datei an, die nur er les
 ```bash
 mkdir -p ~/.config/idrac && chmod 700 ~/.config/idrac
 cat > ~/.config/idrac/t330.env <<'ENV'
-IDRAC_HOST=<Adresse des iDRAC im T330>
-IDRAC_USERNAME=<Benutzer>
-IDRAC_PASSWORD=<Passwort>
+IDRAC_HOST='<Adresse des iDRAC im T330>'
+IDRAC_USERNAME='<Benutzer>'
+IDRAC_PASSWORD='<Passwort>'
 ENV
 chmod 600 ~/.config/idrac/t330.env      # dasselbe für r720xd.env
 ```
@@ -2457,8 +2472,10 @@ Halt und Meldung an Getty, ohne weiterzumachen, wenn:
 
 ```bash
 FP=$(openssl s_client -connect "$IDRAC_HOST:443" </dev/null 2>/dev/null | openssl x509 -noout -fingerprint -sha256 | sed 's/.*=//; s/://g' | tr A-F a-f)
-echo "IDRAC_SSL_FINGERPRINT=sha256\$$FP" >> ~/.config/idrac/t330.env
+echo "IDRAC_SSL_FINGERPRINT='sha256\$$FP'" >> ~/.config/idrac/t330.env
 ```
+
+Die Werte stehen in einfachen Anführungszeichen, hier wie in Step 1: Die Datei wird mit `.` eingelesen, und ohne sie frisst die Shell das `$` des Fingerprints und jedes Sonderzeichen im Passwort.
 
 - [ ] **Step 4: Aufnehmen**
 
@@ -5195,6 +5212,8 @@ done_testing;
 Run: `prove -lv t/85-fixtures.t`
 Expected: je ein Subtest für `idrac7`, `idrac8` und `the invented controller`. Fehlen die Aufnahmen noch, läuft nur der dritte; dann bleibt diese Aufgabe offen, bis Aufgabe 5 erledigt ist.
 
+Beim ersten Lauf mit einer neuen Aufnahme scheitert ihr Subtest an `there is no t/fixtures/<name>/expect.json` und druckt, was die Aufnahme zeigt: welche Methoden `Unsupported` sind, welche eine leere Liste liefern und welche Schlüssel in jeder Zeile `undef` sind. Diese Liste ist der Befund dieser Aufgabe. Jeder Schlüssel unter `undef` ist entweder ein Feld, das dieser Controller nicht liefert (bleibt stehen), oder eines, das der Code unter falschem Namen sucht (Fehler, Vorgehen wie in Step 3). Erst wenn sie stimmt, wird sie als `expect.json` gespeichert.
+
 - [ ] **Step 3: Befunde abarbeiten**
 
 Für jede Zeile, die nicht `ok` ist, gilt dasselbe Vorgehen:
@@ -5401,6 +5420,12 @@ Diesen Schritt führt kein Agent aus. Er leert das Event-Log, schaltet den Serve
 
 ```bash
 ( set -a; . ~/.config/idrac/t330.env; set +a; IDRAC_LIVE_DESTRUCTIVE=1 prove -lv t/90-live-idrac.t )
+```
+
+Bietet der Controller kein sanftes Herunterfahren an, wird das Schalten übersprungen. Den Strom hart abzuschalten erlaubt erst ein zweiter Schalter:
+
+```bash
+( set -a; . ~/.config/idrac/t330.env; set +a; IDRAC_LIVE_DESTRUCTIVE=1 IDRAC_LIVE_FORCE_OFF=1 prove -lv t/90-live-idrac.t )
 ```
 
 Das Ergebnis, oder dass der Lauf nicht stattgefunden hat, steht in der Übergabe.

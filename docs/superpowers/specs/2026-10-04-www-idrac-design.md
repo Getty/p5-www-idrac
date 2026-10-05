@@ -249,12 +249,16 @@ hängt von `WWW-iDRAC` ab und teilt diesen Code, statt ihn zu kopieren.
   beide Generationen prüft.
 - **Fixtures** nimmt `t/idrac/record.pl` auf: nur `GET`, läuft den Redfish-Baum ab und
   ersetzt vor dem Schreiben Service-Tags, Seriennummern, MACs, IPs, Hostnamen, UUIDs und
-  Benutzernamen durch feste Platzhalter. Das Repo wird öffentlich; unbereinigte
-  Aufzeichnungen werden nicht committet.
+  Benutzernamen durch feste Platzhalter. Behalten werden nur die Dokumentarten, die die
+  Tests lesen, ohne Hersteller-Abschnitte (`Oem`) und ohne den Text von Log-Meldungen.
+  Das Repo wird öffentlich; unbereinigte Aufzeichnungen werden nicht committet, und ein
+  Mensch liest jede Aufnahme, bevor sie committet wird. Neben jeder Aufnahme liegt ein
+  `expect.json`, das sagt, was dieser Controller nicht hat.
 - **Live-Suite** `t/90-live-idrac.t` läuft nur mit `IDRAC_HOST`, `IDRAC_USERNAME`,
   `IDRAC_PASSWORD` (dazu `IDRAC_SSL_FINGERPRINT` oder `IDRAC_VERIFY_SSL=0`) und ist
   lesend. Schaltende Tests (Power, `clear_sel`, `manager->restart`) brauchen zusätzlich
-  `IDRAC_LIVE_DESTRUCTIVE=1`, weil sie eine echte Maschine treffen.
+  genau `IDRAC_LIVE_DESTRUCTIVE=1`, weil sie eine echte Maschine treffen; den Strom hart
+  abzuschalten braucht darüber hinaus `IDRAC_LIVE_FORCE_OFF=1`.
 
 Abhängigkeiten: `Moo`, `Type::Tiny`, `LWP::UserAgent`, `LWP::Protocol::https`,
 `IO::Socket::SSL`, `HTTP::Message`, `JSON::MaybeXS`, `namespace::autoclean`; für die
@@ -275,6 +279,22 @@ auf und trägt die Ergebnisse hier ein.
 | Wo liegen SEL und Lifecycle-Log, kommen Einträge inline oder einzeln? | Legt die Umsetzung von `logs` und `limit` fest. |
 | Welche Schlüssel aus Abschnitt 5 liefert iDRAC 7/8 tatsächlich? | Schlüssel ohne Quelle bleiben `undef`; fehlende ganze Ressourcen werden `Unsupported`. |
 | WS-Man oder racadm über SSH als zweiter Transport? | Entscheidung für Phase 2. Kriterium: Was deckt BIOS-Attribute, Jobs und Virtual Media auf beiden Geräten ab und liefert strukturierte Daten? |
+
+### Vermutungen aus dem Review (2026-10-05)
+
+Der Review des gebauten Stands hat aus Dells Dokumentation Vermutungen über iDRAC 7/8 mit
+Firmware 2.x genannt. Sie sind nicht gemessen und nicht umgesetzt; Karte 1 prüft sie an
+den Aufnahmen.
+
+| Vermutung | Wenn sie stimmt |
+|---|---|
+| Angebotene Reset-Typen sind nur `On`, `ForceOff`, `GracefulRestart`, `PushPowerButton`, `Nmi` | `power->off`, `restart( force => 1 )` und `cycle` sind auf beiden Geräten `Unsupported`. Getty entscheidet, ob `off` dann `PushPowerButton` senden soll, wenn der Server an ist. |
+| `on` oder hartes `off` in einem Zustand, der schon erreicht ist, wird mit 409 beantwortet | Die schaltenden Methoden sollten zurückkehren, ohne zu senden, wenn der Zustand schon stimmt. |
+| `LinkStatus` fehlt an den Netzwerkschnittstellen | `link_up` ist immer `undef`; gehört dann ins `expect.json`. |
+| Die `Memory`-Collection fehlt auf früher 2.x-Firmware | `system->memory` ist `Unsupported`; das ist schon behandelt. |
+| `Thermal` und `Power` enthalten auf früher 2.x-Firmware nur Verweise statt der Messwerte | Die Sensoren kämen als Zeilen mit lauter `undef` zurück; das `expect.json` zeigt es. |
+| Während der iDRAC neu startet, antwortet er auch mit 503 | Anfragen in der Zeit enden dann in `Error::API`, nicht nur in `Error::Network`; das POD von `manager->restart` wäre zu ergänzen. |
+| Der Service-Root `/redfish/v1/` antwortet mit einem Redirect | Der Client folgt keinem Redirect; der Pfad des Service-Root wäre dann anzupassen. |
 
 ## 10. Phasen
 
