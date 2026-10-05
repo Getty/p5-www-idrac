@@ -12,6 +12,7 @@ use WWW::iDRAC::Error::Unsupported;
 use WWW::iDRAC::Error::Validation;
 use WWW::iDRAC::Power;
 use WWW::iDRAC::Redfish;
+use WWW::iDRAC::Sensors;
 use WWW::iDRAC::System;
 use namespace::autoclean;
 
@@ -238,6 +239,16 @@ sub _build_power { WWW::iDRAC::Power->new( redfish => $_[0]->redfish ) }
 =attr power
 
 L<WWW::iDRAC::Power>: switching the server, and what it draws.
+
+=cut
+
+has sensors => ( is => 'lazy' );
+
+sub _build_sensors { WWW::iDRAC::Sensors->new( redfish => $_[0]->redfish ) }
+
+=attr sensors
+
+L<WWW::iDRAC::Sensors>: temperatures, fans, voltages, power supplies.
 
 =cut
 

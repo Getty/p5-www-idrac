@@ -14,6 +14,7 @@ for (qw(
   WWW::iDRAC::Redfish
   WWW::iDRAC::Role::Capability
   WWW::iDRAC::Role::HTTP
+  WWW::iDRAC::Sensors
   WWW::iDRAC::System
   WWW::iDRAC::Util
 )) {
