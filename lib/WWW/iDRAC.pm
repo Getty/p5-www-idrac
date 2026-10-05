@@ -179,14 +179,18 @@ sub _build_ua {
     agent      => 'WWW-iDRAC/'.$VERSION,
     timeout    => $self->timeout,
     keep_alive => 1,
-    ssl_opts   => { %ssl, %{ $self->ssl_opts } }
+    # a redirect would carry the session token or the password to wherever it leads
+    max_redirect => 0,
+    ssl_opts     => { %ssl, %{ $self->ssl_opts } }
   );
 }
 
 =attr ua
 
-The L<LWP::UserAgent>. Give your own and the TLS attributes and L</timeout>
-above are not applied.
+The L<LWP::UserAgent>. The one built here follows no redirect, because a
+redirect would carry the session token or the password to wherever it leads.
+Give your own and neither that nor the TLS attributes and L</timeout> above
+are applied.
 
 =cut
 

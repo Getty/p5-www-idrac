@@ -27,6 +27,7 @@ subtest 'the user agent' => sub {
   isa_ok( $default, 'LWP::UserAgent' );
   is( $default->timeout, 60, 'waits 60 seconds' );
   like( $default->agent, qr{\AWWW-iDRAC/}, 'names itself' );
+  is( $default->max_redirect, 0, 'follows no redirect, which would carry the token or the password to wherever it leads' );
   ok( $default->ssl_opts('verify_hostname'), 'verifies the certificate by default' );
   is( $default->ssl_opts('SSL_verify_mode'), undef, 'and does not touch the verify mode' );
 

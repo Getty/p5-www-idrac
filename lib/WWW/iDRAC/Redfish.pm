@@ -3,7 +3,7 @@ package WWW::iDRAC::Redfish;
 # ABSTRACT: The Redfish transport of WWW::iDRAC, and the way to what the facade does not cover
 
 use Moo;
-use Scalar::Util qw( blessed );
+use Scalar::Util qw( blessed refaddr weaken );
 use Types::Standard qw( Bool HashRef InstanceOf Maybe Str );
 use WWW::iDRAC::Error::API;
 use WWW::iDRAC::Error::Validation;
@@ -88,6 +88,15 @@ has _root         => ( is => 'rw', isa => Maybe [HashRef] );
 has _located      => ( is => 'ro', isa => HashRef, default => sub { {} } );
 
 with 'WWW::iDRAC::Role::HTTP';
+
+# the transports that may hold a session, held weakly, for the END block below
+my %LIVE;
+
+sub BUILD {
+  my ( $self ) = @_;
+  weaken( $LIVE{ refaddr $self } = $self );
+  return;
+}
 
 sub url {
   my ( $self, $path ) = @_;
@@ -188,23 +197,37 @@ sub logout {
   my $path  = $self->_session_path;
   $self->forget_session;
   return 0 unless defined $token && defined $path;
-  $self->send_request( DELETE => $self->url($path), token => $token );
-  return 1;
+  return 1 if eval { $self->send_request( DELETE => $self->url($path), token => $token ); 1 };
+  my $error = $@;
+  # a session the controller has dropped already is a session that is over
+  return 1 if blessed $error && $error->isa( $self->api_error_class ) && ( $error->is_unauthorized || $error->is_not_found );
+  die $error;
 }
 
 =method logout
 
-Ends the session, if there is one. An iDRAC allows only a few sessions at a
-time and frees an abandoned one only after a timeout, so call this when you
-are done. The object also does it when it is destroyed.
+Ends the session, if there is one, and returns true when there was one. A
+session the controller has dropped by itself counts as ended. An iDRAC allows
+only a few sessions at a time and frees an abandoned one only after a
+timeout, so call this when you are done. The object also does it when it is
+destroyed, and every object still alive does it when the program ends.
 
 =cut
 
 sub DEMOLISH {
   my ( $self ) = @_;
   local ( $@, $!, $? );
+  delete $LIVE{ refaddr $self };
   eval { $self->logout };
   return;
+}
+
+# An object in a file-scoped variable that a sub uses lives until global
+# destruction, where its user agent may be gone before it is. So the sessions
+# still open are ended here, while everything is still whole.
+END {
+  local ( $@, $!, $? );
+  eval { $_->logout } for grep { defined } values %LIVE;
 }
 
 sub request {
@@ -217,8 +240,11 @@ sub request {
   my $error = $@;
   die $error unless blessed $error && $error->isa( $self->api_error_class ) && $error->is_unauthorized;
   # the session ran out or the controller was restarted: one new login, one more try
+  my $old = $self->_session_path;
   $self->forget_session;
   $self->login;
+  # where the refusal was not about the session, the old one is still open
+  eval { $self->send_request( DELETE => $self->url($old), token => $self->_token ) } if defined $old;
   return $self->send_request( $method => $url, %arg, token => $self->_token );
 }
 
@@ -295,7 +321,7 @@ sub locate {
   WWW::iDRAC::Error::Validation->throw( message => 'locate knows Systems, Chassis and Managers, got '.( $kind // 'nothing' ) )
     unless defined $kind && $kind =~ /\A(?:Systems|Chassis|Managers)\z/;
   my $located = $self->_located;
-  return $located->{$kind} if exists $located->{$kind};
+  return $located->{$kind} if defined $located->{$kind};
   my $path;
   if ( $kind ne 'Systems' && defined( my $system = $self->locate('Systems') ) ) {
     # the system says which chassis holds it and which manager manages it
@@ -311,7 +337,8 @@ sub locate {
       ( $path ) = map { $_->{'@odata.id'} } grep { ref $_ eq 'HASH' && defined $_->{'@odata.id'} } ref $doc->{Members} eq 'ARRAY' ? @{ $doc->{Members} } : ();
     }
   }
-  return $located->{$kind} = $path;
+  $located->{$kind} = $path if defined $path;
+  return $path;
 }
 
 =method locate
@@ -321,8 +348,8 @@ sub locate {
 The path of the system, of the chassis that holds it and of the manager that
 manages it, or C<undef> when the controller has none. Found through the
 collections of the service root and the links of the system, not through
-fixed names, and remembered for the lifetime of the object. Readings and
-states are never remembered.
+fixed names, and remembered for the lifetime of the object once found; a
+miss is looked for again. Readings and states are never remembered.
 
 =cut
 

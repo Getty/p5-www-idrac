@@ -96,7 +96,12 @@ sub read_response {
   # decoded_content undoes a Content-Encoding, the raw content does not; with
   # charset => 'none' the bytes stay bytes, which the JSON codec decodes itself
   my $content = $response->decoded_content( charset => 'none' ) // '';
-  my $data    = length $content ? eval { $self->json_codec->decode($content) } : undef;
+  my $data;
+  my $is_json = !length $content || eval { $data = $self->json_codec->decode($content); 1 };
+  $self->api_error_class->throw(
+    message     => $method.' '.$url.' answered '.$response->status_line.' with a body that is not JSON',
+    http_status => $response->code
+  ) if $response->is_success && !$is_json;
   return {
     status   => $response->code,
     data     => $data,
@@ -119,7 +124,9 @@ sub read_response {
 
 Turns an L<HTTP::Response> into C<status>, the decoded C<data>, the
 C<location> header and the C<token> from C<X-Auth-Token>, or throws
-L</api_error_class> for any status that is not a success.
+L</api_error_class> for any status that is not a success, and for a success
+whose body is not JSON: a login page where a document was expected, or a
+document cut short.
 
 =cut
 

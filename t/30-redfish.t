@@ -153,6 +153,55 @@ subtest 'locate' => sub {
   is( $other->locate('Managers'), undef, 'undef where the controller has none' );
 };
 
+subtest 'a logout the controller refuses' => sub {
+  my $fake    = FakeiDRAC->new;
+  my $redfish = transport($fake);
+  $redfish->get($system);
+  $fake->forget_tokens;
+  my $ended;
+  is( error_of { $ended = $redfish->logout }, undef, 'does not die when the controller no longer knows the session' );
+  is( $ended, 1, 'and counts as a session that is over' );
+
+  my $moved = FakeiDRAC->new;
+  my $other = transport($moved);
+  $other->get($system);
+  $_ = 99 for values %{ $moved->{tokens} };
+  is( error_of { $other->logout }, undef, 'nor when the controller has no session at that address' );
+  like( ( $moved->seen(qr/\ADELETE/) )[-1], qr{\ADELETE /redfish/v1/Sessions/1\z}, 'which it was asked for' );
+};
+
+subtest 'a resource that refuses the login it is given' => sub {
+  my $fake = FakeiDRAC->new;
+  $fake->deny($manager);
+  my $redfish = transport($fake);
+  for ( 1 .. 5 ) {
+    my $error = error_of { $redfish->get($manager) };
+    ok( $error && $error->is_unauthorized, 'refused, request '.$_ );
+  }
+  cmp_ok( $fake->sessions, '<=', 1, 'the sessions do not pile up on the controller' );
+  is( $redfish->get($system)->{Model}, 'PowerEdge T330', 'and other resources stay reachable' );
+  undef $redfish;
+  is( $fake->sessions, 0, 'none is left behind' );
+};
+
+subtest 'a miss is not remembered' => sub {
+  my $fake    = FakeiDRAC->new;
+  my $members = $fake->doc('/redfish/v1/Managers')->{Members};
+  delete $fake->doc($system)->{Links};
+  $fake->doc('/redfish/v1/Managers')->{Members} = [];
+  my $redfish = transport($fake);
+  is( $redfish->locate('Managers'), undef, 'nothing there' );
+  $fake->doc('/redfish/v1/Managers')->{Members} = $members;
+  is( $redfish->locate('Managers'), $manager, 'found once it is' );
+};
+
+subtest 'an address with characters that are escaped on the way' => sub {
+  my $fake = FakeiDRAC->new;
+  my $path = '/redfish/v1/Chassis/System.Embedded.1/Sensors/0x17||Fan.Embedded.1A';
+  $fake->{docs}{$path} = { '@odata.id' => $path, Reading => 4800 };
+  is( transport($fake)->get($path)->{Reading}, 4800, 'is found under the address the controller gave' );
+};
+
 subtest 'something that is not Redfish' => sub {
   my $fake = FakeiDRAC->new;
   delete $fake->doc('/redfish/v1')->{RedfishVersion};

@@ -24,6 +24,7 @@ use HTTP::Response;
 use JSON::MaybeXS;
 use MIME::Base64 qw( decode_base64 );
 use URI;
+use URI::Escape ();
 
 my $JSON = JSON::MaybeXS->new( utf8 => 1, canonical => 1 );
 
@@ -40,7 +41,8 @@ sub new {
     requests => [],
     seq      => 0,
     delay    => $arg{delay} // 0,
-    pending  => undef
+    pending  => undef,
+    denied   => {}
   );
   return $self;
 }
@@ -60,6 +62,9 @@ sub sessions { scalar keys %{ $_[0]{tokens} } }
 sub doc { $_[0]{docs}{ $_[1] } }
 
 sub remove { delete $_[0]{docs}{ $_[1] }; return }
+
+# a path that answers 401 whatever login it is given
+sub deny { $_[0]{denied}{ $_[1] } = 1; return }
 
 # what a restart of the controller does to the sessions it handed out
 sub forget_tokens { $_[0]{tokens} = {}; return }
@@ -96,6 +101,15 @@ sub _key {
   my ( $self, $path ) = @_;
   $path =~ s{/+\z}{} unless $path eq '/';
   return $path;
+}
+
+# the document at a path, however the path was escaped on its way here
+sub _doc {
+  my ( $self, $path ) = @_;
+  return $self->{docs}{$path} if $self->{docs}{$path};
+  my $plain = URI::Escape::uri_unescape($path);
+  my ( $key ) = grep { URI::Escape::uri_unescape($_) eq $plain } keys %{ $self->{docs} };
+  return defined $key ? $self->{docs}{$key} : undef;
 }
 
 sub _authorized {
@@ -149,14 +163,19 @@ sub request {
   return $self->_error( 401, 'Base.1.0.AccessDenied', 'The authentication credentials included with this request are missing or invalid.', 'Log in again.' )
     unless $self->_authorized($request);
 
+  return $self->_error( 401, 'Base.1.0.InsufficientPrivilege', 'There are insufficient privileges for the account or credentials associated with the current session.', 'Use an account with the privilege.' )
+    if $self->{denied}{$path};
+
   if ( defined $sessions && $method eq 'DELETE' && $path =~ m{\A\Q$sessions\E/(\d+)\z} ) {
-    my $id = $1;
-    delete $self->{tokens}{$_} for grep { $self->{tokens}{$_} == $id } keys %{ $self->{tokens} };
+    my $id   = $1;
+    my @open = grep { $self->{tokens}{$_} == $id } keys %{ $self->{tokens} }
+      or return $self->_error( 404, 'Base.1.0.ResourceMissingAtURI', 'The resource at the URI '.$path.' was not found.', 'Check the URI and retry.' );
+    delete @{ $self->{tokens} }{@open};
     return $self->_reply(204);
   }
 
   if ( $method eq 'GET' ) {
-    my $doc = $self->{docs}{$path}
+    my $doc = $self->_doc($path)
       or return $self->_error( 404, 'Base.1.0.ResourceMissingAtURI', 'The resource at the URI '.$path.' was not found.', 'Check the URI and retry.' );
     if ( $self->{pending} && $path eq $self->{pending}{path} && --$self->{pending}{after} < 0 ) {
       $doc->{PowerState} = $self->{pending}{state};

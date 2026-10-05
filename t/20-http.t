@@ -48,6 +48,15 @@ subtest 'read_response on success' => sub {
   is_deeply( $empty, { status => 204, data => undef, location => undef, token => undef }, 'an answer without a body' );
 };
 
+subtest 'a success that is no JSON' => sub {
+  my $page = error_of { $client->read_response( HTTP::Response->new( 200, 'OK', [ 'Content-Type' => 'text/html' ], '<html>Login</html>' ), GET => 'https://idrac.test/e' ) };
+  isa_ok( $page, 'WWW::iDRAC::Error::API', 'a page where a document was expected' );
+  is( $page->http_status, 200, 'with the status it came with' );
+  like( "$page", qr{\AGET https://idrac\.test/e answered 200 OK with a body that is not JSON\z}, 'and a message that says what happened' );
+  my $cut = error_of { $client->read_response( answer( 200, '{"Model":"Power' ), GET => 'https://idrac.test/f' ) };
+  isa_ok( $cut, 'WWW::iDRAC::Error::API', 'a document cut short' );
+};
+
 subtest 'the shapes an error comes in' => sub {
   my $extended = error_of {
     $client->read_response( answer( 400, '{"error":{"code":"Base.1.0.GeneralError","message":"A general error has occurred.","@Message.ExtendedInfo":[{"MessageId":"IDRAC.1.6.SYS403","Message":"Unable to complete the operation.","Resolution":"Retry later."}]}}' ), POST => 'https://idrac.test/a' );
