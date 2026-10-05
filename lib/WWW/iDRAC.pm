@@ -10,6 +10,7 @@ use WWW::iDRAC::Error::API;
 use WWW::iDRAC::Error::Network;
 use WWW::iDRAC::Error::Unsupported;
 use WWW::iDRAC::Error::Validation;
+use WWW::iDRAC::Logs;
 use WWW::iDRAC::Power;
 use WWW::iDRAC::Redfish;
 use WWW::iDRAC::Sensors;
@@ -249,6 +250,16 @@ sub _build_sensors { WWW::iDRAC::Sensors->new( redfish => $_[0]->redfish ) }
 =attr sensors
 
 L<WWW::iDRAC::Sensors>: temperatures, fans, voltages, power supplies.
+
+=cut
+
+has logs => ( is => 'lazy' );
+
+sub _build_logs { WWW::iDRAC::Logs->new( redfish => $_[0]->redfish ) }
+
+=attr logs
+
+L<WWW::iDRAC::Logs>: the system event log and the lifecycle log.
 
 =cut
 

@@ -1,0 +1,88 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use Test::More;
+use lib 't/lib';
+
+use FakeiDRAC;
+use iDRACShapes;
+use WWW::iDRAC;
+
+my @warnings;
+local $SIG{__WARN__} = sub { push @warnings, @_ };
+
+sub error_of (&) { my ( $code ) = @_; eval { $code->(); 1 } ? undef : $@ }
+
+sub idrac { WWW::iDRAC->new( host => $_[0]->host, username => 'root', password => 'calvin', ua => $_[0] ) }
+
+my $manager = '/redfish/v1/Managers/iDRAC.Embedded.1';
+
+subtest 'sel' => sub {
+  my $sel = idrac( FakeiDRAC->new )->logs->sel;
+  shape_ok( $sel, 'logs.sel' );
+  is_deeply( [ map { $_->{id} } @$sel ], [ 3, 2, 1 ], 'newest first' );
+  is_deeply( $sel->[1], { id => '2', created => '2026-10-02T08:00:00+02:00', severity => 'critical', message => 'Fan 2 failed.', message_id => 'FAN0001' }, 'translated, the severity in lower case' );
+};
+
+subtest 'lifecycle' => sub {
+  my $fake = FakeiDRAC->new;
+  my $log  = idrac($fake)->logs->lifecycle;
+  shape_ok( $log, 'logs.lifecycle' );
+  is_deeply( [ map { $_->{id} } @$log ], [ 3, 2, 1 ], 'all pages' );
+  is( $log->[2]{severity}, 'informational', 'a severity that is no health level is kept' );
+  my $two = idrac($fake)->logs->lifecycle( limit => 2 );
+  is_deeply( [ map { $_->{id} } @$two ], [ 3, 2 ], 'limit takes the front of the list' );
+  isa_ok( error_of { idrac($fake)->logs->lifecycle( limit => 'all' ) }, 'WWW::iDRAC::Error::Validation', 'a limit that is no number' );
+};
+
+subtest 'the default limit' => sub {
+  my $fake = FakeiDRAC->new;
+  $fake->doc( $manager.'/Logs/Sel' )->{Members} = [ map { { '@odata.id' => $manager.'/Logs/Sel/'.$_, Id => "$_", Created => sprintf( '2026-09-%02dT00:00:%02d+02:00', 1 + int( $_ / 60 ), $_ % 60 ) } } 1 .. 120 ];
+  is( scalar @{ idrac($fake)->logs->sel }, 50, '50 entries unless told otherwise' );
+  is( scalar @{ idrac($fake)->logs->sel( limit => 120 ) }, 120, 'more on request' );
+};
+
+subtest 'entries without a date' => sub {
+  my $entry = WWW::iDRAC::Logs->entry_from( {} );
+  shape_ok( $entry, 'logs.sel' );
+  is_deeply( [ grep { defined $entry->{$_} } keys %$entry ], [], 'every key is there and undef' );
+  my $fake = FakeiDRAC->new;
+  delete $fake->doc( $manager.'/Logs/Sel' )->{Members}[0]{Created};
+  is_deeply( [ map { $_->{id} } @{ idrac($fake)->logs->sel } ], [ 3, 1, 2 ], 'sort last' );
+};
+
+subtest 'clear_sel' => sub {
+  my $fake = FakeiDRAC->new;
+  my $logs = idrac($fake)->logs;
+  is( $logs->clear_sel, 1, 'returns true' );
+  is( $fake->requests->[-1]->method.' '.$fake->requests->[-1]->uri->path, 'POST '.$manager.'/LogServices/Sel/Actions/LogService.ClearLog', 'at the target the log service names' );
+  is_deeply( $logs->sel, [], 'the log is empty' );
+};
+
+subtest 'a controller without these logs' => sub {
+  my $fake = FakeiDRAC->new;
+  my $logs = idrac($fake)->logs;
+  ok( $logs->supports($_), $_ ) for qw( sel lifecycle clear_sel );
+  ok( !eval { $logs->supports('clear_lifecycle'); 1 }, 'there is no clear_lifecycle' );
+
+  delete $fake->doc( $manager.'/LogServices/Sel' )->{Actions};
+  my $posts = $fake->seen(qr/\APOST .*ClearLog/);
+  my $error = error_of { $logs->clear_sel };
+  isa_ok( $error, 'WWW::iDRAC::Error::Unsupported', 'a log service without a clear action' );
+  is( $error->capability, 'logs.clear_sel', 'names the capability' );
+  is( scalar $fake->seen(qr/\APOST .*ClearLog/), $posts, 'nothing was sent' );
+
+  $fake->doc( $manager.'/LogServices' )->{Members} = [ { '@odata.id' => $manager.'/LogServices/Sel' } ];
+  like( error_of { $logs->lifecycle }, qr/\Alogs\.lifecycle is not available on this iDRAC: the controller has no log service lclog\z/, 'no lifecycle log' );
+  ok( !$logs->supports('lifecycle'), 'supports says so' );
+
+  delete $fake->doc( $manager.'/LogServices/Sel' )->{Id};
+  is( scalar @{ $logs->sel }, 3, 'a service without an Id is found by its address' );
+
+  delete $fake->doc($manager)->{LogServices};
+  isa_ok( error_of { $logs->sel }, 'WWW::iDRAC::Error::Unsupported', 'a manager without log services' );
+};
+
+is_deeply( \@warnings, [], 'no warnings' );
+
+done_testing;
