@@ -5,6 +5,12 @@ use Test::More;
 
 for (qw(
   WWW::iDRAC
+  WWW::iDRAC::Error
+  WWW::iDRAC::Error::API
+  WWW::iDRAC::Error::Network
+  WWW::iDRAC::Error::Unsupported
+  WWW::iDRAC::Error::Validation
+  WWW::iDRAC::Role::HTTP
 )) {
   use_ok($_);
 }
