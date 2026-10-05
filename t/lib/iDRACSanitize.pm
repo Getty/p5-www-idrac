@@ -127,7 +127,8 @@ sub _collect {
   # the domain of a full name is in other strings without the name in front,
   # and so are the domains above it
   my $domain = $kind eq 'fqdn' ? ( $node =~ /\A[^.]+\.(.+\..+)\z/ )[0] : $kind eq 'domain' ? $node : undef;
-  while ( defined $domain && $domain =~ /\./ ) {
+  # example.org names nobody, and the placeholders are made of it
+  while ( defined $domain && $domain =~ /\./ && $domain !~ /(?:\A|\.)example\.org\z/i ) {
     $self->name( domain => $domain );
     ( $domain ) = $domain =~ /\A[^.]+\.(.+\..+)\z/;
   }

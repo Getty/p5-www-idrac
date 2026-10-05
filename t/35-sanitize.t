@@ -120,6 +120,11 @@ subtest 'a recording that was cleaned before' => sub {
   is( $out->{'/a'}{Note}, $once{'/a'}{Note}, 'placeholders inside a text are left as they are' );
   is_deeply( \@warnings, [], 'without a warning' );
   is_deeply( [ $again->leaks($out) ], [], 'and a value that looks like the placeholder of another is no leak' );
+
+  my $reserved = iDRACSanitize->new;
+  my $named    = $reserved->sanitize( { '/c' => { FQDN => 'idrac-7.lab.example.org', Note => 'mail to admin@example.org' } } );
+  like( $named->{'/c'}{FQDN}, qr/\Afqdn-\d+\.example\.org\z/, 'a name under example.org is replaced like any other' );
+  is_deeply( [ $reserved->leaks($named) ], [], 'and example.org itself, which the placeholders are made of, is no leak' );
 };
 
 subtest 'the controller reached by its address' => sub {
