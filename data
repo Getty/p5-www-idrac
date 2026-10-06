@@ -1,0 +1,19 @@
+---
+claimed_at: 2026-10-05T03:04:47Z
+claimed_by: hub
+class: standard
+completed: 2026-10-06T04:48:04Z
+created: 2026-10-05T02:08:13Z
+id: 1
+priority: high
+started: 2026-10-06T04:48:04Z
+status: done
+title: 'Observe iDRAC 7 and 8 live: transport, recorder, fixtures, sharpen the spec'
+updated: 2026-10-06T04:48:04Z
+---
+
+Plan tasks 2 to 5 in docs/superpowers/plans/2026-10-04-www-idrac-phase-1.md. Task 5 needs Getty: addresses, credentials, and reading the recordings before they are committed.
+
+Plan tasks 2-5 done 2026-10-05. Both controllers recorded read-only (R720xd iDRAC 7 fw 2.65, T330 iDRAC 8 fw 2.50), spec section 9 answered. Waits for Getty: read t/fixtures/idrac7/redfish.json and t/fixtures/idrac8/redfish.json (untracked on purpose) and git add them.
+
+2026-10-05 23:41 Getty released the recordings on 2026-10-06 after an independent search of both files (no address, name, serial or credential of the machines left); committed as 81a59c6. Nothing open on this card.
