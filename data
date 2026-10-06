@@ -1,0 +1,20 @@
+---
+claimed_at: 2026-10-05T03:04:48Z
+claimed_by: hub
+class: standard
+completed: 2026-10-06T04:48:04Z
+created: 2026-10-05T02:08:13Z
+id: 2
+priority: high
+started: 2026-10-06T04:48:04Z
+status: done
+title: 'Phase 1: facade, the five capability classes, capabilities, fixture test,
+  live suite'
+updated: 2026-10-06T04:48:04Z
+---
+
+Plan tasks 6 to 13. Tasks 6 to 11 do not wait for card 1; task 12 and the live run of task 13 do.
+
+Plan tasks 6-13 done except step 4 of task 13 (the switching part of the live suite; both machines are in production, maintainer only). Read-only live suite PASS against both. Open decision for Getty: power->off on the T330 and power->restart on the R720xd are Unsupported because the gentle reset type is not offered; fall back to PushPowerButton / the forced form, or keep Unsupported? See spec section 9.
+
+2026-10-05 23:41 2026-10-06: Getty decided the power question: it stays Unsupported, no fallback to PushPowerButton or the forced form. With Getty's leave the switching part of the live suite ran against the R720xd (iDRAC 7): clear_sel, gentle off, on, manager restart, all PASS (0ce98cf). The iDRAC 7 answers reads of the event log with 500 for about a minute while it erases it; the suite waits now. Still not run against hardware: off( force => 1 ), restart( force => 1 ), and all switching on an iDRAC 8. Section 9 of the spec has the measurements.
