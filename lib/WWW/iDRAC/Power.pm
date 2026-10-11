@@ -57,14 +57,8 @@ C<powering_on>.
 
 sub reset_action {
   my ( $self, $method, $force ) = @_;
-  my $type   = $RESET{$method}[ $force ? 1 : 0 ];
-  my $doc    = $self->resource( Systems => $method );
-  my $action = ref $doc->{Actions} eq 'HASH' ? $doc->{Actions}{'#ComputerSystem.Reset'} : undef;
-  $self->unsupported( $method, 'the system offers no reset action' ) unless ref $action eq 'HASH' && defined $action->{target};
-  my $allowed = $action->{'ResetType@Redfish.AllowableValues'};
-  $self->unsupported( $method, 'reset type '.$type.' is not offered, only '.join( ', ', grep { defined } @$allowed ) )
-    if ref $allowed eq 'ARRAY' && !grep { defined && $_ eq $type } @$allowed;
-  return ( $action->{target}, $type );
+  my $doc = $self->resource( Systems => $method );
+  return $self->reset_action_from( $method, $force, $doc );
 }
 
 =method reset_action
@@ -72,6 +66,42 @@ sub reset_action {
     my ( $target, $type ) = $power->reset_action( off => $force );
 
 Where a switching method sends its order and with which reset type, or
+L<WWW::iDRAC::Error::Unsupported>.
+
+=cut
+
+sub reset_type {
+  my ( $class, $method, $force ) = @_;
+  return undef unless exists $RESET{$method};
+  return $RESET{$method}[ $force ? 1 : 0 ];
+}
+
+=method reset_type
+
+    my $type = WWW::iDRAC::Power->reset_type( 'off', 1 );
+
+The reset type a switching method asks for, gently and with force, or
+C<undef> for a method this class does not know.
+
+=cut
+
+sub reset_action_from {
+  my ( $class, $method, $force, $doc ) = @_;
+  my $type   = $class->reset_type( $method, $force );
+  my $action = ref $doc->{Actions} eq 'HASH' ? $doc->{Actions}{'#ComputerSystem.Reset'} : undef;
+  $class->unsupported( $method, 'the system offers no reset action' ) unless ref $action eq 'HASH' && defined $action->{target};
+  my $allowed = $action->{'ResetType@Redfish.AllowableValues'};
+  $class->unsupported( $method, 'reset type '.$type.' is not offered, only '.join( ', ', grep { defined } @$allowed ) )
+    if ref $allowed eq 'ARRAY' && !grep { defined && $_ eq $type } @$allowed;
+  return ( $action->{target}, $type );
+}
+
+=method reset_action_from
+
+    my ( $target, $type ) = WWW::iDRAC::Power->reset_action_from( off => 0, $system_document );
+
+The target and type behind L</reset_action>, without I/O: what a system
+document of an iDRAC says about the named reset, or
 L<WWW::iDRAC::Error::Unsupported>.
 
 =cut

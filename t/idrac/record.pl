@@ -35,6 +35,12 @@ my $ua      = LWP::UserAgent->new( timeout => 60, keep_alive => 1, max_redirect 
 my $base    = 'https://'.$ENV{IDRAC_HOST};
 my $redfish = WWW::iDRAC::Redfish->new( base_url => $base, username => $ENV{IDRAC_USERNAME}, password => $ENV{IDRAC_PASSWORD}, ua => $ua );
 
+# an iDRAC allows only a few sessions; end ours on Ctrl+C and on a TERM
+# so a killed script does not pin a slot until the controller times it out
+my $ended = 0;
+my $end_session = sub { return if $ended; $ended++; eval { $redfish->logout }; exit 130 };
+$SIG{INT}  = $SIG{TERM} = $end_session;
+
 my $hello = $ua->get( $base.'/redfish/v1/' );
 my $root  = $redfish->root;
 
@@ -43,6 +49,7 @@ my $raw      = $recorder->record;
 my $sessions = eval { $redfish->get('/redfish/v1/SessionService') } || {};
 my $open     = eval { $redfish->get( $root->{Links}{Sessions}{'@odata.id'} ) } || {};
 $redfish->logout;
+$ended = 1;
 
 my ( $host ) = $ENV{IDRAC_HOST} =~ /\A\[?([^\]]+?)\]?(?::[0-9]+)?\z/;
 my $sanitizer = iDRACSanitize->new->hide( host => $host )->hide( user => $ENV{IDRAC_USERNAME} )->hide( secret => $ENV{IDRAC_PASSWORD} );

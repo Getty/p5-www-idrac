@@ -105,6 +105,29 @@ subtest 'entries that are linked but not there' => sub {
   ok( $logs->supports('lifecycle'), 'and still yes for the other log' );
 };
 
+subtest 'a member of a collection that is not there' => sub {
+  my $fake = FakeiDRAC->new;
+  push @{ $fake->doc( $manager.'/Logs/Sel' )->{Members} },
+    { '@odata.id' => $manager.'/Logs/Sel/Gone' };
+  my $error = error_of { idrac($fake)->logs->sel };
+  isa_ok( $error, 'WWW::iDRAC::Error::API', 'a missing member is an API error' );
+  like( "$error", qr/Logs\/Sel\/Gone/, 'names the missing member' );
+  unlike( "$error", qr{\A\s*GET\s+\S+Sel\s+failed}, 'does not blame just the collection' );
+};
+
+subtest 'service_from and clear_action_from without I/O' => sub {
+  my $sel   = { Id => 'Sel', '@odata.id' => '/x/Sel' };
+  my $lc    = { Id => 'Lclog', '@odata.id' => '/x/Lclog' };
+  is( WWW::iDRAC::Logs->service_from( sel => [ $sel, $lc ] ), $sel, 'sel matches Sel' );
+  is( WWW::iDRAC::Logs->service_from( lclog => [ $sel, $lc ] ), $lc, 'lclog matches Lclog' );
+  is( WWW::iDRAC::Logs->service_from( sel => [ $lc ] ), undef, 'no match' );
+  is( WWW::iDRAC::Logs->clear_action_from( { Actions => { '#LogService.ClearLog' => { target => '/x/Sel/Actions/LogService.ClearLog' } } } ),
+    '/x/Sel/Actions/LogService.ClearLog', 'the target' );
+  my $none = error_of { WWW::iDRAC::Logs->clear_action_from( {} ) };
+  isa_ok( $none, 'WWW::iDRAC::Error::Unsupported', 'a log service without a clear action' );
+  is( $none->capability, 'logs.clear_sel', 'names the capability' );
+};
+
 subtest 'what the real controllers call things' => sub {
   # iDRAC 7 (2.65) and iDRAC 8 (2.50): the services are SEL and LC, at .../LogServices/Sel and .../LogServices/Lclog
   my $fake = FakeiDRAC->new;

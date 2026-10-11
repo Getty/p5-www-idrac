@@ -60,7 +60,10 @@ certificate, `verify_ssl => 0` turns the check off.
 ## Sessions
 
 The client logs in once and ends its session when it goes away. An iDRAC allows only a
-few sessions at a time, so call `$idrac->logout` when you are done.
+few sessions at a time, so call `$idrac->logout` when you are done. A process that dies
+without going through the destructor — `kill -9`, an unhandled signal, a panic in a
+dependency — leaves the session open until the controller times it out. Catch what you
+can and call `logout` before you exit.
 
 ## License
 

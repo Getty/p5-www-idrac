@@ -85,8 +85,21 @@ sub fetch_members {
   my @docs;
   return grep { ref $_ eq 'HASH' } @docs if eval { @docs = $self->redfish->members( $path, %arg ); 1 };
   my $error = $@;
-  $self->unsupported( $method, $path.' does not exist' ) if $self->_not_found($error);
+  if ( $self->_not_found($error) ) {
+    my $error_path = $self->_path_of_error($error);
+    return $self->unsupported( $method, $path.' does not exist' ) if defined $error_path && $error_path eq $path;
+  }
   die $error;
+}
+
+# the path an API error was raised for, or undef; lets fetch_members tell
+# a missing collection from a missing member
+sub _path_of_error {
+  my ( $self, $error ) = @_;
+  return undef unless blessed $error && $error->isa('WWW::iDRAC::Error');
+  my ( $url ) = "$error" =~ /\AGET\s+(\S+)\s+failed/;
+  return undef unless defined $url;
+  return $self->redfish->path_of($url);
 }
 
 =method fetch_members

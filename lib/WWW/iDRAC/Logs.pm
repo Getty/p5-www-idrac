@@ -36,14 +36,31 @@ iDRAC. The entries fetched are returned newest first.
 # serve them at .../LogServices/Sel and .../LogServices/Lclog
 my %NAMES = ( sel => [qw( sel )], lclog => [qw( lclog lc )] );
 
-sub service {
-  my ( $self, $id, $method ) = @_;
-  my $path = $self->linked_path( $self->resource( Managers => $method ), LogServices => $method );
-  for my $service ( $self->fetch_members( $path, $method ) ) {
+sub service_from {
+  my ( $class, $id, $services ) = @_;
+  for my $service ( @$services ) {
     my %called = map { lc $_ => 1 } grep { defined } text( $service->{Id} ), ( ( $service->{'@odata.id'} // '' ) =~ m{([^/]+)/?\z} )[0];
     return $service if grep { $called{$_} } @{ $NAMES{$id} };
   }
-  $self->unsupported( $method, 'the controller has no log service '.$id );
+  return undef;
+}
+
+=method service_from
+
+    my $doc = WWW::iDRAC::Logs->service_from( sel => \@log_services );
+
+The document of the log service C<sel> or C<lclog> out of an array of
+service documents, or C<undef> when none matches.
+
+=cut
+
+sub service {
+  my ( $self, $id, $method ) = @_;
+  my $path     = $self->linked_path( $self->resource( Managers => $method ), LogServices => $method );
+  my @services = $self->fetch_members( $path, $method );
+  my $service  = $self->service_from( $id, \@services );
+  $self->unsupported( $method, 'the controller has no log service '.$id ) unless defined $service;
+  return $service;
 }
 
 =method service
@@ -118,12 +135,25 @@ The lifecycle log, in the same form.
 
 =cut
 
+sub clear_action_from {
+  my ( $class, $service ) = @_;
+  my $action = ref $service->{Actions} eq 'HASH' ? $service->{Actions}{'#LogService.ClearLog'} : undef;
+  $class->unsupported( 'clear_sel', 'the log service offers no clear action' ) unless ref $action eq 'HASH' && defined $action->{target};
+  return $action->{target};
+}
+
+=method clear_action_from
+
+    my $target = WWW::iDRAC::Logs->clear_action_from($log_service_document);
+
+The target behind L</clear_action>, without I/O: where a log service document
+of an iDRAC says to POST, or L<WWW::iDRAC::Error::Unsupported>.
+
+=cut
+
 sub clear_action {
   my ( $self ) = @_;
-  my $service = $self->service( sel => 'clear_sel' );
-  my $action  = ref $service->{Actions} eq 'HASH' ? $service->{Actions}{'#LogService.ClearLog'} : undef;
-  $self->unsupported( clear_sel => 'the log service offers no clear action' ) unless ref $action eq 'HASH' && defined $action->{target};
-  return $action->{target};
+  return $self->clear_action_from( $self->service( sel => 'clear_sel' ) );
 }
 
 sub clear_sel {

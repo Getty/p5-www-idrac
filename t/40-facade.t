@@ -53,6 +53,10 @@ subtest 'the user agent' => sub {
   my $own = WWW::iDRAC->new( host => 'idrac.example.org', %login, ssl_opts => { SSL_version => 'TLSv1_2', verify_hostname => 0 } )->ua;
   is( $own->ssl_opts('SSL_version'), 'TLSv1_2', 'ssl_opts are passed on' );
   ok( !$own->ssl_opts('verify_hostname'), 'and win over the defaults' );
+
+  my $conflict = error_of { WWW::iDRAC->new( host => 'idrac.example.org', %login, verify_ssl => 0, ssl_fingerprint => 'sha256$ab12' ) };
+  isa_ok( $conflict, 'WWW::iDRAC::Error::Validation', 'verify_ssl => 0 with ssl_fingerprint' );
+  like( "$conflict", qr/drops the pin/, 'and why' );
 };
 
 subtest 'the parts share one transport' => sub {

@@ -207,6 +207,9 @@ sub BUILD {
   WWW::iDRAC::Error::Validation->throw(
     message => 'password is required'
   ) unless defined $self->password && length $self->password;
+  WWW::iDRAC::Error::Validation->throw(
+    message => 'verify_ssl => 0 with ssl_fingerprint drops the pin: either verify the certificate or set a fingerprint, not both'
+  ) if !$self->verify_ssl && $self->has_ssl_fingerprint;
   return;
 }
 

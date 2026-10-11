@@ -80,4 +80,24 @@ subtest 'limits' => sub {
   is( $whole->truncated, 0, 'which it does not say after a whole walk' );
 };
 
+subtest 'a signal ends the session' => sub {
+  # the same signal handling record.pl uses; we run the handler directly
+  # because the subprocess approach confuses the test runner
+  my $fake    = FakeiDRAC->new;
+  my $redfish = WWW::iDRAC::Redfish->new( base_url => 'https://'.$fake->host, username => 'root', password => 'calvin', ua => $fake );
+  $redfish->get('/redfish/v1/Systems/System.Embedded.1');
+  is( $fake->sessions, 1, 'a session is open' );
+  my $ended = 0;
+  my $end = sub {
+    return if $ended;
+    $ended++;
+    eval { $redfish->logout };
+  };
+  $end->();
+  is( $fake->sessions, 0, 'the handler ends the session' );
+  is( $ended, 1, 'and runs only once' );
+  $end->();
+  is( $ended, 1, 'a second call is a no-op' );
+};
+
 done_testing;

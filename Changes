@@ -10,6 +10,12 @@ Revision history for WWW-iDRAC
     - logout uses a 5 s timeout and does not run in a forked child
     - login refuses a controller that answers without a Location or
       @odata.id, because that session cannot be ended
+    - record.pl ends the session on INT and TERM
+    - verify_ssl => 0 with ssl_fingerprint is a Validation error
+    - fetch_members names a missing member instead of blaming the collection
+    - Power::reset_action, Logs::service and Logs::clear_action now have
+      pure *_from functions for the async twin
+    - README notes that a killed process leaves a session open
     - Facade WWW::iDRAC for one controller: host, credentials, TLS options
     - WWW::iDRAC::Redfish: the transport and the way to everything the facade
       does not cover; session login, one new login when the token is refused,

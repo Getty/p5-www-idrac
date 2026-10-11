@@ -81,6 +81,20 @@ subtest 'an order this controller does not offer' => sub {
   like( error_of { $power->on }, qr/\Apower\.on is not available on this iDRAC: the system offers no reset action\z/, 'a system without a reset action' );
 };
 
+subtest 'reset_type and reset_action_from without I/O' => sub {
+  is( WWW::iDRAC::Power->reset_type( 'off', 0 ), 'GracefulShutdown', 'off, gently' );
+  is( WWW::iDRAC::Power->reset_type( 'off', 1 ), 'ForceOff', 'off, with force' );
+  is( WWW::iDRAC::Power->reset_type( 'nope', 0 ), undef, 'a method this class does not know' );
+  my $doc = idrac( FakeiDRAC->new )->system->info;  # any system document
+  $doc = { Actions => { '#ComputerSystem.Reset' => { target => '/a/b', 'ResetType@Redfish.AllowableValues' => [ 'On' ] } } };
+  is_deeply( [ WWW::iDRAC::Power->reset_action_from( 'on', 0, $doc ) ], [ '/a/b', 'On' ], 'a type that is offered' );
+  my $forced = error_of { WWW::iDRAC::Power->reset_action_from( 'off', 1, $doc ) };
+  isa_ok( $forced, 'WWW::iDRAC::Error::Unsupported', 'a type that is not offered' );
+  is( $forced->capability, 'power.off', 'names the capability' );
+  my $none = error_of { WWW::iDRAC::Power->reset_action_from( 'on', 0, {} ) };
+  isa_ok( $none, 'WWW::iDRAC::Error::Unsupported', 'a system without a reset action' );
+};
+
 subtest 'wait_for' => sub {
   my $fake  = FakeiDRAC->new( delay => 3 );
   my $power = idrac($fake)->power;
