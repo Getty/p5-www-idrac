@@ -92,6 +92,10 @@ with 'WWW::iDRAC::Role::HTTP';
 # the transports that may hold a session, held weakly, for the END block below
 my %LIVE;
 
+# the process that loaded this module; a forked child's $$ differs, and the
+# child does not end the parent's session
+our $PID = $$;
+
 sub BUILD {
   my ( $self ) = @_;
   weaken( $LIVE{ refaddr $self } = $self );
@@ -164,8 +168,11 @@ sub login {
   my $result = $self->send_request( POST => $url, json => { UserName => $self->username, Password => $self->password } );
   $self->api_error_class->throw( message => 'POST '.$url.' answered without an X-Auth-Token', http_status => $result->{status} )
     unless defined $result->{token};
+  my $session_path = $self->path_of( $result->{location} ) // ( ref $result->{data} eq 'HASH' ? $result->{data}{'@odata.id'} : undef );
+  $self->api_error_class->throw( message => 'POST '.$url.' answered without a Location or @odata.id, the session cannot be ended', http_status => $result->{status} )
+    unless defined $session_path;
   $self->_token( $result->{token} );
-  $self->_session_path( $self->path_of( $result->{location} ) // ( ref $result->{data} eq 'HASH' ? $result->{data}{'@odata.id'} : undef ) );
+  $self->_session_path( $session_path );
   return 1;
 }
 
@@ -193,11 +200,18 @@ dropped the session itself.
 
 sub logout {
   my ( $self ) = @_;
+  return 0 unless $$ == $PID;
   my $token = $self->_token;
   my $path  = $self->_session_path;
   $self->forget_session;
   return 0 unless defined $token && defined $path;
-  return 1 if eval { $self->send_request( DELETE => $self->url($path), token => $token ); 1 };
+  # a logout that hangs should not hold up a program that is about to end
+  my $ua    = $self->ua;
+  my $saved = $ua->timeout;
+  $ua->timeout(5);
+  my $ok = eval { $self->send_request( DELETE => $self->url($path), token => $token ); 1 };
+  $ua->timeout($saved) if defined $saved;
+  return 1 if $ok;
   my $error = $@;
   # a session the controller has dropped already is a session that is over
   return 1 if blessed $error && $error->isa( $self->api_error_class ) && ( $error->is_unauthorized || $error->is_not_found );
@@ -224,9 +238,11 @@ sub DEMOLISH {
 
 # An object in a file-scoped variable that a sub uses lives until global
 # destruction, where its user agent may be gone before it is. So the sessions
-# still open are ended here, while everything is still whole.
+# still open are ended here, while everything is still whole. A forked child
+# does not end the parent's session.
 END {
   local ( $@, $!, $? );
+  return unless $$ == $PID;
   eval { $_->logout } for grep { defined } values %LIVE;
 }
 

@@ -7,6 +7,9 @@ Revision history for WWW-iDRAC
     - Util::number rejects NaN, Inf, -Inf and Infinity
     - Logs are sorted by epoch, with string tiebreak
     - wait_for validates its state, interval and timeout
+    - logout uses a 5 s timeout and does not run in a forked child
+    - login refuses a controller that answers without a Location or
+      @odata.id, because that session cannot be ended
     - Facade WWW::iDRAC for one controller: host, credentials, TLS options
     - WWW::iDRAC::Redfish: the transport and the way to everything the facade
       does not cover; session login, one new login when the token is refused,

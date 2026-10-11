@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
+use POSIX qw( _exit );
 use Test::More;
 use lib 't/lib';
 
@@ -59,6 +60,45 @@ subtest 'a session is ended when the object goes away' => sub {
     undef $redfish;
     is( $@, 'untouched', 'a logout the controller refuses does not die and leaves $@ alone' );
   }
+};
+
+subtest 'logout uses a short timeout' => sub {
+  my $fake    = FakeiDRAC->new;
+  my $redfish = transport($fake);
+  $fake->timeout(100);
+  $redfish->get($system);
+  is( $fake->timeouts->[-1], 100, 'a normal request uses the UA timeout' );
+  $redfish->logout;
+  is( $fake->timeouts->[-1], 5, 'the logout uses a short timeout' );
+  is( $redfish->ua->timeout, 100, 'and restores it' );
+};
+
+subtest 'a forked child does not end the parent session' => sub {
+  my $fake    = FakeiDRAC->new;
+  my $redfish = transport($fake);
+  $redfish->get($system);
+  is( $fake->sessions, 1, 'a session is open' );
+  my $pid = fork // die 'cannot fork: '.$!;
+  if ( $pid == 0 ) {
+    eval { $redfish->logout };
+    is( $fake->sessions, 1, 'in the child, the parent session is still open' );
+    POSIX::_exit(0);
+  }
+  waitpid $pid, 0;
+  is( $fake->sessions, 1, 'and in the parent too' );
+  $redfish->logout;
+  is( $fake->sessions, 0, 'the parent ends it itself' );
+};
+
+subtest 'a login without a path to the session' => sub {
+  my $fake    = FakeiDRAC->new( bare_session => 1 );
+  my $redfish = transport($fake);
+  my $error   = error_of { $redfish->get($system) };
+  isa_ok( $error, 'WWW::iDRAC::Error::API', 'a controller without Location or @odata.id' );
+  is( $error->http_status, 201, 'with the status the controller answered' );
+  like( "$error", qr/cannot be ended/, 'and why' );
+  is( $fake->sessions, 1, 'the session is on the controller' );
+  is( scalar $fake->seen(qr/\ADELETE/), 0, 'and no logout was attempted' );
 };
 
 subtest 'a refused token is renewed once' => sub {

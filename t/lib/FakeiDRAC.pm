@@ -33,16 +33,18 @@ sub new {
   my $self = $class->SUPER::new;
   %$self = (
     %$self,
-    host     => 'idrac.test',
-    docs     => $arg{docs} || $class->default_docs,
-    username => 'root',
-    password => 'calvin',
-    tokens   => {},
-    requests => [],
-    seq      => 0,
-    delay    => $arg{delay} // 0,
-    pending  => undef,
-    denied   => {}
+    host         => 'idrac.test',
+    docs         => $arg{docs} || $class->default_docs,
+    username     => 'root',
+    password     => 'calvin',
+    tokens       => {},
+    requests     => [],
+    seq          => 0,
+    delay        => $arg{delay} // 0,
+    pending      => undef,
+    denied       => {},
+    bare_session => $arg{bare_session} ? 1 : 0,
+    timeouts     => []
   );
   return $self;
 }
@@ -57,6 +59,7 @@ sub from_file {
 sub host     { $_[0]{host} }
 sub requests { $_[0]{requests} }
 sub sessions { scalar keys %{ $_[0]{tokens} } }
+sub timeouts { $_[0]{timeouts} }
 
 # the document at a path, to change it in a test
 sub doc { $_[0]{docs}{ $_[1] } }
@@ -141,6 +144,7 @@ sub _action {
 
 sub request {
   my ( $self, $request ) = @_;
+  push @{ $self->{timeouts} }, $self->timeout;
   push @{ $self->{requests} }, $request;
   my $uri    = URI->new( $request->uri );
   my $path   = $self->_key( $uri->path_query );
@@ -156,8 +160,10 @@ sub request {
     my $id    = ++$self->{seq};
     my $token = 'token-'.$id;
     $self->{tokens}{$token} = $id;
-    return $self->_reply( 201, { '@odata.id' => $sessions.'/'.$id, Id => "$id", UserName => $self->{username} },
-      'X-Auth-Token' => $token, Location => 'https://'.$self->{host}.$sessions.'/'.$id );
+    my $body = $self->{bare_session} ? { Id => "$id", UserName => $self->{username} } : { '@odata.id' => $sessions.'/'.$id, Id => "$id", UserName => $self->{username} };
+    my %header = ( 'X-Auth-Token' => $token );
+    $header{Location} = 'https://'.$self->{host}.$sessions.'/'.$id unless $self->{bare_session};
+    return $self->_reply( 201, $body, %header );
   }
 
   return $self->_error( 401, 'Base.1.0.AccessDenied', 'The authentication credentials included with this request are missing or invalid.', 'Log in again.' )
