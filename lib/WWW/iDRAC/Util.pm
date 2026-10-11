@@ -39,12 +39,17 @@ empty string and anything that is not a plain value.
 
 sub number {
   my ( $value ) = @_;
-  return defined $value && !ref $value && looks_like_number($value) ? $value + 0 : undef;
+  return undef unless defined $value && !ref $value && looks_like_number($value);
+  my $n = $value + 0;
+  # NaN and Inf parse as numbers but are not useful values; "$n == $n" is
+  # false for NaN, "$n - $n" is Inf for an infinite value
+  return $n == $n && $n - $n == 0 ? $n : undef;
 }
 
 =func number
 
-A number, or C<undef> for anything that is none.
+A finite number, or C<undef> for anything that is not one: missing values,
+references, NaN, Inf.
 
 =cut
 

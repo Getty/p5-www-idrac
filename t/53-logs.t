@@ -51,6 +51,19 @@ subtest 'entries without a date' => sub {
   is_deeply( [ map { $_->{id} } @{ idrac($fake)->logs->sel } ], [ 3, 1, 2 ], 'sort last' );
 };
 
+subtest 'entries across UTC offsets' => sub {
+  # 02:00 in -08:00 (10:00 UTC) is later than 08:00 in +02:00 (06:00 UTC),
+  # but string ordering puts the +02:00 entry first when offsets differ
+  my $fake = FakeiDRAC->new;
+  $fake->doc( $manager.'/Logs/Sel' )->{Members} = [
+    { '@odata.id' => $manager.'/Logs/Sel/A', Created => '2026-10-02T08:00:00+02:00', Severity => 'OK',    Message => 'A', MessageId => 'A' },
+    { '@odata.id' => $manager.'/Logs/Sel/B', Created => '2026-10-02T02:00:00-08:00', Severity => 'OK',    Message => 'B', MessageId => 'B' },
+    { '@odata.id' => $manager.'/Logs/Sel/C', Created => '2026-10-02T12:00:00Z',      Severity => 'OK',    Message => 'C', MessageId => 'C' }
+  ];
+  is_deeply( [ map { $_->{message_id} } @{ idrac($fake)->logs->sel } ], [ 'C', 'B', 'A' ], 'newest first across offsets, by UTC' );
+  is( WWW::iDRAC::Logs::_epoch( '2026-10-02T02:00:00-08:00' ), WWW::iDRAC::Logs::_epoch( '2026-10-02T10:00:00Z' ), 'the same moment, the same epoch' );
+};
+
 subtest 'clear_sel' => sub {
   my $fake = FakeiDRAC->new;
   my $logs = idrac($fake)->logs;

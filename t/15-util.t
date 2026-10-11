@@ -22,6 +22,11 @@ subtest 'number' => sub {
   is( number(-7), -7, 'a negative one' );
   is( number(0), 0, 'zero' );
   is( number($_), undef, 'nothing for '.( defined $_ ? ref $_ ? 'a reference' : "'$_'" : 'undef' ) ) for undef, '', 'N/A', [], JSON::MaybeXS::false;
+  is( number('NaN'), undef, 'NaN is not a useful number' );
+  is( number('nan'), undef, 'NaN, lower case' );
+  is( number('Inf'), undef, 'Inf is not a useful number' );
+  is( number('-Inf'), undef, '-Inf' );
+  is( number('Infinity'), undef, 'Infinity' );
 };
 
 subtest 'health_of' => sub {

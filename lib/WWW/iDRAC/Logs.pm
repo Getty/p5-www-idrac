@@ -3,6 +3,7 @@ package WWW::iDRAC::Logs;
 # ABSTRACT: The system event log and the lifecycle log of an iDRAC
 
 use Moo;
+use Time::Piece;
 use WWW::iDRAC::Util qw( text );
 use namespace::autoclean;
 
@@ -57,7 +58,19 @@ sub entries {
   my ( $self, $id, $method, %arg ) = @_;
   my $path    = $self->linked_path( $self->service( $id, $method ), Entries => $method );
   my @entries = map { $self->entry_from($_) } $self->fetch_members( $path, $method, limit => $arg{limit} // 50 );
-  return [ sort { ( $b->{created} // '' ) cmp ( $a->{created} // '' ) } @entries ];
+  return [ sort { ( _epoch($b->{created}) // 0 ) <=> ( _epoch($a->{created}) // 0 ) || ( $b->{created} // '' ) cmp ( $a->{created} // '' ) } @entries ];
+}
+
+# an ISO 8601 timestamp as epoch seconds, or undef when the controller did
+# not write one; entries without a timestamp go last, then by string
+sub _epoch {
+  my ( $iso ) = @_;
+  return undef unless defined $iso && $iso =~ m{\A(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(Z|[+-]\d{2}:\d{2})\z};
+  my ( $y, $mo, $d, $h, $mi, $s, $tz ) = ( $1, $2, $3, $4, $5, $6, $7 );
+  # Time::Piece's %z wants ±HHMM, no colon
+  my $z = $tz eq 'Z' ? '+0000' : ( substr( $tz, 0, 3 ).substr( $tz, 4, 2 ) );
+  my $t = Time::Piece->strptime( "${y}-${mo}-${d}T${h}:${mi}:${s}${z}", '%Y-%m-%dT%H:%M:%S%z' );
+  return $t->epoch;
 }
 
 sub entry_from {
