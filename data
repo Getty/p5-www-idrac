@@ -1,0 +1,27 @@
+---
+claimed_at: 2026-10-11T16:18:08Z
+claimed_by: www-idrac-release-manager
+class: standard
+completed: 2026-10-11T16:18:08Z
+created: 2026-10-05T02:41:39Z
+id: 6
+priority: low
+started: 2026-10-11T15:53:13Z
+status: done
+title: Deferred minors from the phase 1 review
+updated: 2026-10-11T16:18:10Z
+---
+
+Thirteen minor findings of the whole-branch review of 2026-10-05, not acted on: credentials typed into host are echoed by the Validation message; constructor errors are not WWW::iDRAC::Error objects; record.pl has no signal handling; verify_ssl => 0 with ssl_fingerprint probably drops the pin; wait_for with interval 0 busy-loops and a non-numeric timeout warns; power->off(1) warns instead of failing validation; Util::number passes NaN and Inf; logout on destruction waits the full timeout and a forked child ends the parent's session; a login without Location or @odata.id cannot be logged out; fetch_members blames the collection for a member's 404; Logs sorts timestamps as strings across UTC offsets; reset_action, service and clear_action mix I/O with the decision, which the async twin would have to copy; README does not mention that a killed process leaves a session.
+
+2026-10-06 04:48 Carried over from card 2 (2026-10-06): never run against hardware are off( force => 1 ) and restart( force => 1 ) on any controller, and everything that switches on an iDRAC 8. Needs a machine that may be switched.
+
+2026-10-11 15:55 Plan: 5 commits. (1) validation hardening (echo + constructor errors + strict off/restart args). (2) Util::number rejects NaN/Inf, logs sort by epoch. (3) wait_for input validation. (4) session lifecycle (short logout timeout, skip in forked child, login without path is an error). (5) HTTP/tooling (record.pl signals, verify_ssl+fingerprint is a Validation error, members names the 404, I/O vs decision split, README kill-process note).
+
+2026-10-11 16:03 2026-10-11 16:00 Commits 1-4 done locally. (1) validation hardening, (2) Util::number NaN/Inf + Logs sort by epoch, (3) wait_for input validation, (4) session lifecycle (short logout timeout, forked child skipped, login without Location/@odata.id is an API error). Tree is 140/140 green; not committed yet.
+
+2026-10-11 16:09 2026-10-11 16:30 Commit 5 done locally. record.pl has signal handling; verify_ssl => 0 with ssl_fingerprint is a Validation error; fetch_members names a missing member, not the collection; Power::reset_action/Logs::service/Logs::clear_action now have pure *_from functions; README notes that a killed process leaves a session. Tree is 144/144 green, dzil test clean. All 5 commits are ready locally; not committed yet.
+
+2026-10-11 16:09 All 5 commits done locally on a commit-ready tree. 144/144 tests green, dzil test clean. Please cut the commits, write the Changes entry, and move to done. (1) validation hardening: echo + constructor errors + strict off/restart args. (2) Util::number rejects NaN/Inf, logs sort by epoch. (3) wait_for input validation. (4) session lifecycle: short logout timeout, forked child skipped, login without Location/@odata.id is an API error. (5) HTTP/tooling: record.pl signals, verify_ssl+fingerprint is a Validation error, members names the 404, I/O vs decision split, README kill-process note.
+
+8a63c77..ae7cf54: five commits — validation hardening (echo + strict off/restart/cycle args), Util::number NaN/Inf + logs by epoch, wait_for validation, session lifecycle (short logout timeout, forked child skipped, no Location is an API error), and HTTP/tooling (record.pl signals, verify_ssl+fingerprint is Validation, missing member named, I/O split, README kill-process note)
