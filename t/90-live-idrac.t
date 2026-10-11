@@ -18,7 +18,10 @@ use lib 't/lib';
 # IDRAC_LIVE_FORCE_OFF=1 allows cutting the power instead.
 #
 # Whatever happens on the way, the test tries to leave the server in the
-# power state it found it in.
+# power state it found it in. The same rule applies to that restore: a
+# graceful shutdown when the controller offers one, the cut only when
+# IDRAC_LIVE_FORCE_OFF=1 has allowed it, otherwise a loud diag and no
+# power action at all.
 
 BEGIN {
   plan skip_all => 'set IDRAC_HOST, IDRAC_USERNAME and IDRAC_PASSWORD to run the iDRAC live test'
@@ -26,6 +29,7 @@ BEGIN {
 }
 
 use Scalar::Util qw( blessed );
+use iDRACRestorePower;
 use iDRACShapes;
 use WWW::iDRAC;
 
@@ -39,18 +43,15 @@ my $idrac = WWW::iDRAC->new(
 );
 my $cap = $idrac->capabilities;
 
-# the power state the server was found in, from the moment the test starts switching
+# the power state the server was found in, from the moment the test starts switching,
+# and the same gentle / force decision the switching block made — visible to the
+# END block, which runs after the SKIP block has long exited
 my $found;
+my $gentle;
+my $force;
 
 END {
-  if ( $idrac && $found ) {
-    my $now = eval { $idrac->power->state } // 'unknown';
-    if ( $now ne $found ) {
-      diag 'the server was '.$found.' when the test began and is '.$now.' now: putting it back';
-      eval { $found eq 'on' ? $idrac->power->on : $idrac->power->off( force => 1 ); 1 }
-        or diag 'THAT FAILED, LOOK AFTER THE SERVER BY HAND: '.$@;
-    }
-  }
+  iDRACRestorePower::restore_power_to( $idrac, $found, $gentle, $force );
   eval { $idrac->logout } if $idrac;
 }
 
@@ -126,8 +127,8 @@ subtest 'changing things' => sub {
     my $start = $power->state // '';
     skip 'the server is neither on nor off but '.$start, 4 unless $start eq 'on' || $start eq 'off';
     skip 'power.on is not on this controller', 4 unless $cap->supports('power.on');
-    my $gentle = $cap->supports('power.off');
-    my $force  = ( $ENV{IDRAC_LIVE_FORCE_OFF} // '' ) eq '1';
+    $gentle = $cap->supports('power.off');
+    $force  = ( $ENV{IDRAC_LIVE_FORCE_OFF} // '' ) eq '1';
     skip 'power.off is not on this controller; set IDRAC_LIVE_FORCE_OFF=1 to cut the power instead', 4 unless $gentle || $force;
     diag 'power.off is not on this controller, the power is cut instead' unless $gentle;
     my %step = (
