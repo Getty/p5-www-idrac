@@ -43,6 +43,17 @@ subtest 'switching' => sub {
   is( $sent->(), 'POST '.$reset.' {"ResetType":"ForceOff"}', 'off with force' );
   $power->restart;
   is( $sent->(), 'POST '.$reset.' {"ResetType":"GracefulRestart"}', 'restart' );
+  my @warnings;
+  local $SIG{__WARN__} = sub { push @warnings, @_ };
+  for my $call ( [ 'on',      $power->can('on')      ], [ 'off',     $power->can('off') ], [ 'restart', $power->can('restart') ], [ 'cycle',   $power->can('cycle') ] ) {
+    my ( $name, $cv ) = @$call;
+    my $positional = error_of { $cv->( $power, 1 ) };
+    isa_ok( $positional, 'WWW::iDRAC::Error::Validation', "$name(1) is a validation error, not a warning" );
+    my $unknown = error_of { $cv->( $power, bogus => 1 ) };
+    isa_ok( $unknown, 'WWW::iDRAC::Error::Validation', "$name(bogus => 1) names the unknown argument" )
+      if $name eq 'off' || $name eq 'restart';
+  }
+  is_deeply( \@warnings, [], 'no warnings from positional or unknown arguments' );
 };
 
 subtest 'an order this controller does not offer' => sub {

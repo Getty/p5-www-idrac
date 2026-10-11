@@ -77,16 +77,24 @@ L<WWW::iDRAC::Error::Unsupported>.
 =cut
 
 sub _reset {
-  my ( $self, $method, %arg ) = @_;
+  my ( $self, $method, @args ) = @_;
+  WWW::iDRAC::Error::Validation->throw(
+    message => $method.' takes no positional arguments'
+  ) if @args % 2;
+  my %arg = @args;
+  my @bad = grep { $_ ne 'force' } keys %arg;
+  WWW::iDRAC::Error::Validation->throw(
+    message => $method.' takes only \'force\', got '.join( ', ', sort @bad )
+  ) if @bad;
   my ( $target, $type ) = $self->reset_action( $method, $arg{force} );
   $self->redfish->post( $target, { ResetType => $type } );
   return 1;
 }
 
-sub on      { $_[0]->_reset('on') }
-sub off     { my ( $self, %arg ) = @_; $self->_reset( off => %arg ) }
-sub restart { my ( $self, %arg ) = @_; $self->_reset( restart => %arg ) }
-sub cycle   { $_[0]->_reset('cycle') }
+sub on      { my $self = shift; $self->_reset( on      => @_ ) }
+sub off     { my $self = shift; $self->_reset( off     => @_ ) }
+sub restart { my $self = shift; $self->_reset( restart => @_ ) }
+sub cycle   { my $self = shift; $self->_reset( cycle   => @_ ) }
 
 =method on
 

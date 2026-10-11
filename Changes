@@ -1,6 +1,9 @@
 Revision history for WWW-iDRAC
 
 {{$NEXT}}
+    - Constructor arguments are validated as WWW::iDRAC::Error::Validation
+      without echoing the rejected value
+    - off, restart, cycle and on reject positional arguments and unknown keys
     - Facade WWW::iDRAC for one controller: host, credentials, TLS options
     - WWW::iDRAC::Redfish: the transport and the way to everything the facade
       does not cover; session login, one new login when the token is refused,

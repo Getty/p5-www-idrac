@@ -4,7 +4,7 @@ package WWW::iDRAC;
 
 use Moo;
 use LWP::UserAgent;
-use Types::Standard qw( Bool HashRef InstanceOf Int Str );
+use Types::Standard qw( Bool HashRef InstanceOf Int Maybe Str );
 use WWW::iDRAC::Capabilities;
 use WWW::iDRAC::Error;
 use WWW::iDRAC::Error::API;
@@ -78,9 +78,8 @@ settings in L</ssl_opts>.
 =cut
 
 has host => (
-  is       => 'ro',
-  isa      => Str,
-  required => 1
+  is  => 'ro',
+  isa => Maybe [Str],
 );
 
 =attr host
@@ -89,8 +88,8 @@ Required. The name or address of the iDRAC, optionally with C<:port>.
 
 =cut
 
-has username => ( is => 'ro', isa => Str, required => 1 );
-has password => ( is => 'ro', isa => Str, required => 1 );
+has username => ( is => 'ro', isa => Maybe [Str] );
+has password => ( is => 'ro', isa => Maybe [Str] );
 
 =attr username
 
@@ -196,8 +195,18 @@ are applied.
 
 sub BUILD {
   my ( $self ) = @_;
-  WWW::iDRAC::Error::Validation->throw( message => 'host is a name or an address, optionally with a port, got '.$self->host )
-    unless $self->host =~ /\A(?:\[[0-9A-Fa-f:.]+\]|[A-Za-z0-9._-]+)(?::[0-9]+)?\z/;
+  WWW::iDRAC::Error::Validation->throw(
+    message => 'host is required'
+  ) unless defined $self->host && length $self->host;
+  WWW::iDRAC::Error::Validation->throw(
+    message => 'host is a name or an address, optionally with :port'
+  ) unless $self->host =~ /\A(?:\[[0-9A-Fa-f:.]+\]|[A-Za-z0-9._-]+)(?::[0-9]+)?\z/;
+  WWW::iDRAC::Error::Validation->throw(
+    message => 'username is required'
+  ) unless defined $self->username && length $self->username;
+  WWW::iDRAC::Error::Validation->throw(
+    message => 'password is required'
+  ) unless defined $self->password && length $self->password;
   return;
 }
 

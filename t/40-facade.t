@@ -17,9 +17,17 @@ subtest 'construction' => sub {
   is( WWW::iDRAC->new( host => '192.0.2.10:8443', %login )->base_url, 'https://192.0.2.10:8443', 'an address with a port' );
   is( WWW::iDRAC->new( host => '[2001:db8::10]', %login )->base_url, 'https://[2001:db8::10]', 'an IPv6 address' );
   for my $host ( 'https://idrac.example.org', 'idrac.example.org/redfish', 'two words', '' ) {
-    isa_ok( error_of { WWW::iDRAC->new( host => $host, %login ) }, 'WWW::iDRAC::Error::Validation', "host '$host'" );
+    my $error = error_of { WWW::iDRAC->new( host => $host, username => 'root', password => 'calvin' ) };
+    isa_ok( $error, 'WWW::iDRAC::Error::Validation', "host '$host'" );
+    unlike( "$error", qr/\Q$host\E/, 'the message does not echo the rejected host' ) if length $host;
   }
-  ok( error_of { WWW::iDRAC->new( host => 'idrac.example.org', username => 'root' ) }, 'the password is required' );
+  for my $bad ( [ username => undef ], [ username => '' ], [ password => undef ], [ password => '' ] ) {
+    my ( $field, $value ) = @$bad;
+    my $args = { host => 'idrac.example.org', username => 'root', password => 'calvin' };
+    $args->{$field} = $value;
+    isa_ok( error_of { WWW::iDRAC->new( $args->%* ) }, 'WWW::iDRAC::Error::Validation', "$field required when missing" );
+  }
+  isa_ok( error_of { WWW::iDRAC->new( host => 'idrac.example.org', username => 'root' ) }, 'WWW::iDRAC::Error::Validation', 'the password is required' );
 };
 
 subtest 'the user agent' => sub {
