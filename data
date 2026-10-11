@@ -1,0 +1,57 @@
+---
+claimed_at: 2026-10-11T15:01:52Z
+claimed_by: www-idrac-release-manager
+class: standard
+completed: 2026-10-11T15:01:52Z
+created: 2026-10-06T19:49:24Z
+id: 7
+priority: medium
+started: 2026-10-11T14:51:45Z
+status: done
+tags:
+- test
+- safety
+- power
+- review-2026-10-06
+title: 'Live suite: the END block cuts the power without IDRAC_LIVE_FORCE_OFF'
+updated: 2026-10-11T15:01:52Z
+---
+
+`t/90-live-idrac.t:45-55` restores the power state the server was found in when the test dies half way. For a server that was **off** at the start it does so with `$idrac->power->off( force => 1 )` (line 50), i.e. `ForceOff`, unconditionally.
+
+The header of the same file (lines 16-18) and `CLAUDE.md` promise the opposite: the server is switched off by asking its operating system, and the power is only cut when `IDRAC_LIVE_FORCE_OFF=1` allows it. The switching block honours that (lines 129-135: `$gentle ? $power->off : $power->off( force => 1 )` behind `$force`), the END block does not look at either `$gentle` or `IDRAC_LIVE_FORCE_OFF`.
+
+How it triggers (only `IDRAC_LIVE_DESTRUCTIVE=1`, server found `off`): the test switches it `on`, `wait_for('on')` succeeds, then the gentle `off` or one of the `state` polls inside `wait_for( 'off', timeout => 600 )` throws (a transient `WWW::iDRAC::Error::Network`, a 409/503 from a busy controller). `$found` is still `off`, `state` now says `on`, so END sends `ForceOff` to a machine whose operating system has just booted or is in the middle of the graceful shutdown the test asked for a moment ago.
+
+Note that the timeout path is handled correctly (`undef $found` at line 144); it is only the exception path that falls through to the forced form.
+
+Done when: the END block uses the same decision as the switching block (gentle `off` when `power.off` is supported, `force => 1` only with `IDRAC_LIVE_FORCE_OFF=1`, otherwise only the loud `LOOK AFTER THE SERVER BY HAND` diag), and the header comment says what the restore does.
+
+---
+Fleet review 2026-10-06 · kind: bug · confidence: verified
+
+2026-10-11 14:52 Read t/90-live-idrac.t; checked t/lib/ helpers. Plan: extract END-block decision into t/lib/iDRACRestorePower.pm::restore_power_to(idrac,found,gentle,force); hoist my $gentle, my $force to file scope in the live test next to my $found; update header comment.
+
+2026-10-11 14:53 Created t/lib/iDRACRestorePower.pm with restore_power_to(idrac, found, gentle, force); updated t/90-live-idrac.t (hoisted $gentle/$force to file scope, END block now delegates to helper, header comment updated). prove -lr t is green, 17 files, 131 tests. Handing to test-writer for the unit test.
+
+Added t/91-live-restore-power.t: 5 subtests cover restore_power_to(,,,). Case 1: found off, gentle, no force -> off without force, on not called. Case 2: gentle unsupported, no force -> no call, diag 'LOOK AFTER THE SERVER BY HAND'. Case 3: gentle unsupported, force set -> off(force => 1). Case 4: found on, ends off -> on called, off not. Case 5: $found undef -> no-op whatever state reports. Diag captured via local override of Test::More::diag (Test::Builder->output() does not intercept diag from outside a Context). prove -lr t green, 18 files, 136 tests (live suite skipped). Proposed commit subject: 'Put the END-block restore decision under a unit test'. Changes entry: '- Unit-test the END-block helper that puts the live server back in the power state it started in.' (no behavioral change).
+
+2026-10-11 14:59 Done. Card ready to close.
+
+Files changed (3):
+- t/lib/iDRACRestorePower.pm (new, 64 lines) — restore_power_to(idrac, found, gentle, force); the END block's decision, hoisted into a unit-testable helper. Uses Test::More::diag.
+- t/90-live-idrac.t (modified) — header comment updated (lines 20-24) to describe the restore rule (gentle when supported, force only with IDRAC_LIVE_FORCE_OFF=1, else just diag); my $gentle and my $force hoisted to file scope (lines 49-51) next to my $found; the switching block (line 130-131) now assigns to those instead of declaring lexicals; the END block (lines 53-56) delegates to iDRACRestorePower::restore_power_to.
+- t/91-live-restore-power.t (new, 129 lines) — 5 subtests covering the helper's decision tree: found-off + gentle + no-force -> off without force; gentle unsupported + no-force -> no call + diag; gentle unsupported + force -> off(force => 1); found-on + ends-off -> on; $found undef -> no-op. Diag captured via per-call local override of Test::More::diag.
+
+Verification: prove -lr t green, 18 files, 136 tests (live suite skipped). Live test was not run; IDRAC_LIVE_DESTRUCTIVE / IDRAC_LIVE_FORCE_OFF not set.
+
+Proposed commit subject:
+  Put the END-block restore decision under a unit test
+
+Proposed Changes entry:
+  - The live suite's END block used to fall through to $idrac->power->off(force => 1)
+    whenever the server was off at start and on at end, even when the gentle
+    shutdown had not been vetoed. It now routes through a small helper that
+    honours the same gentle / force decision the switching block does, and
+    that helper is unit-tested against a mock.
+  - Add t/91-live-restore-power.t covering the helper's decision tree.
