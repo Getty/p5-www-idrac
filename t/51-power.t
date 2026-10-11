@@ -90,8 +90,22 @@ subtest 'wait_for' => sub {
   is( $power->state, 'off', 'which it then is' );
   is( $power->wait_for( 'on', timeout => 0, interval => 0 ), 0, 'false when the time is up' );
   is( $power->wait_for('off'), 1, 'a state already reached returns at once' );
+  my @warnings;
+  local $SIG{__WARN__} = sub { push @warnings, @_ };
   isa_ok( error_of { $power->wait_for('standby') }, 'WWW::iDRAC::Error::Validation', 'a state that is neither on nor off' );
   isa_ok( error_of { $power->wait_for }, 'WWW::iDRAC::Error::Validation', 'no state' );
+  my $with_undef = error_of { $power->wait_for(undef) };
+  isa_ok( $with_undef, 'WWW::iDRAC::Error::Validation', 'undef state' );
+  is( "$with_undef", 'wait_for waits for on or off', 'the message says what wait_for waits for, without echoing the bad state' );
+  my $with_junk = error_of { $power->wait_for('standby') };
+  unlike( "$with_junk", qr/standby/, 'a bad state is not echoed in the message' );
+  isa_ok( error_of { $power->wait_for( 'off', timeout => 'soon' ) }, 'WWW::iDRAC::Error::Validation', 'a non-numeric timeout' );
+  isa_ok( error_of { $power->wait_for( 'off', timeout => -1 ) }, 'WWW::iDRAC::Error::Validation', 'a negative timeout' );
+  isa_ok( error_of { $power->wait_for( 'off', interval => 'soon' ) }, 'WWW::iDRAC::Error::Validation', 'a non-numeric interval' );
+  isa_ok( error_of { $power->wait_for( 'off', interval => -1 ) }, 'WWW::iDRAC::Error::Validation', 'a negative interval' );
+  is( $power->wait_for( 'off', timeout => 30, interval => 5 ), 1, 'valid positive numbers work' );
+  is( $power->wait_for( 'off', timeout => 0 ), 1, 'timeout 0 and the default interval' );
+  is_deeply( \@warnings, [], 'no warnings' );
 };
 
 subtest 'consumption' => sub {

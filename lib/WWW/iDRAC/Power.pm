@@ -122,10 +122,15 @@ Power off and on again.
 
 sub wait_for {
   my ( $self, $state, %arg ) = @_;
-  WWW::iDRAC::Error::Validation->throw( message => 'wait_for waits for on or off, got '.( $state // 'nothing' ) )
+  WWW::iDRAC::Error::Validation->throw( message => 'wait_for waits for on or off' )
     unless defined $state && ( $state eq 'on' || $state eq 'off' );
   my $interval = $arg{interval} // 5;
-  my $deadline = time + ( $arg{timeout} // 120 );
+  WWW::iDRAC::Error::Validation->throw( message => 'wait_for interval is a non-negative number of seconds' )
+    unless defined $interval && !ref $interval && $interval =~ /\A-?[0-9]+\z/ && $interval >= 0;
+  my $timeout = $arg{timeout} // 120;
+  WWW::iDRAC::Error::Validation->throw( message => 'wait_for timeout is a non-negative number of seconds' )
+    unless defined $timeout && !ref $timeout && $timeout =~ /\A-?[0-9]+\z/ && $timeout >= 0;
+  my $deadline = time + $timeout;
   while (1) {
     return 1 if ( $self->state // '' ) eq $state;
     return 0 if time >= $deadline;
