@@ -1,22 +1,26 @@
 package WWW::iDRAC;
 
-# ABSTRACT: Perl client for Dell iDRAC - inventory, power, sensors and logs over Redfish
+# ABSTRACT: Perl client for Dell iDRAC - inventory, power, sensors, logs, BIOS, jobs and virtual media
 
 use Moo;
 use LWP::UserAgent;
-use Types::Standard qw( Bool HashRef InstanceOf Int Maybe Str );
+use Types::Standard qw( ArrayRef Bool HashRef InstanceOf Int Maybe Object Str );
+use WWW::iDRAC::Bios;
 use WWW::iDRAC::Capabilities;
 use WWW::iDRAC::Error;
 use WWW::iDRAC::Error::API;
 use WWW::iDRAC::Error::Network;
 use WWW::iDRAC::Error::Unsupported;
 use WWW::iDRAC::Error::Validation;
+use WWW::iDRAC::Jobs;
 use WWW::iDRAC::Logs;
 use WWW::iDRAC::Manager;
 use WWW::iDRAC::Power;
+use WWW::iDRAC::Racadm;
 use WWW::iDRAC::Redfish;
 use WWW::iDRAC::Sensors;
 use WWW::iDRAC::System;
+use WWW::iDRAC::VirtualMedia;
 use namespace::autoclean;
 
 our $VERSION = '0.001';
@@ -42,6 +46,11 @@ our $VERSION = '0.001';
     $idrac->power->off;
     $idrac->power->off( force => 1 ) unless $idrac->power->wait_for( 'off', timeout => 300 );
 
+    # what Redfish lacks on an iDRAC 7 or 8 comes over SSH, with racadm
+    print $idrac->bios->get('BiosBootSettings.BootMode'), "\n";
+    print $_->{id}, ' ', $_->{status}, "\n" for @{ $idrac->jobs->list };
+    print $idrac->capabilities->license // '?', "\n";
+
     # what the facade does not cover yet
     my $chassis = $idrac->redfish->get('/redfish/v1/Chassis');
 
@@ -52,15 +61,33 @@ our $VERSION = '0.001';
 A client for the management controller of Dell PowerEdge servers. The
 methods are cut by what you want to know or do, not by protocol: you ask for
 C<< $idrac->system->info >> and do not care how the answer is fetched. In
-this version everything is fetched over Redfish.
+this version most of it is fetched over Redfish, and what Redfish lacks on an
+iDRAC 7 or 8 (BIOS attributes, the job queue, virtual media, the license) over
+racadm on the SSH service of the controller.
 
 The methods return plain hashes with fixed keys, not Redfish documents. For
 everything they do not cover there is L</redfish>, which hands out the raw
-documents.
+documents, and L</racadm>, which hands out what racadm printed.
 
 What a controller can do depends on its generation, its firmware and its
 license. A method this controller cannot serve throws
 L<WWW::iDRAC::Error::Unsupported> before anything is sent.
+
+=head2 SSH and racadm
+
+BIOS, jobs and virtual media are served over racadm through SSH, which is
+reached with the same C<username> and C<password> unless the C<ssh_*>
+attributes say otherwise. They are only used when one of those methods is
+called, and the Redfish classes never touch SSH. The SSH side needs the
+C<ssh> program of OpenSSH and L<Net::OpenSSH> on this machine, with
+L<IO::Pty> for the password prompt, and the SSH service switched on at the
+iDRAC.
+
+The host key is checked: L</ssh_host_key> pins it, L</ssh_known_hosts> names
+a file, and without either the C<known_hosts> of the user is used. A key it
+does not know ends the connection.  C<< ssh_verify_host_key => 0 >> turns the
+check off and is your decision to make, not a default. See
+L<WWW::iDRAC::Racadm>.
 
 =head2 Certificates
 
@@ -164,6 +191,68 @@ Seconds to wait for an answer, 60 by default. An iDRAC is slow.
 
 =cut
 
+has ssh => (
+  is      => 'ro',
+  isa     => Bool,
+  default => 1
+);
+
+=attr ssh
+
+True by default. False says racadm is not to be used: BIOS, jobs and virtual
+media are L<WWW::iDRAC::Error::Unsupported> without any connection being
+made, and the license is not read.
+
+=cut
+
+has ssh_username => ( is => 'ro', isa => Maybe [Str] );
+has ssh_password => ( is => 'ro', isa => Maybe [Str] );
+
+=attr ssh_username
+
+=attr ssh_password
+
+For the SSH login, when it is not the one of L</username> and L</password>.
+Each one defaults to its counterpart.
+
+=cut
+
+has ssh_port => ( is => 'ro', isa => Int, default => 22 );
+
+=attr ssh_port
+
+The port of the SSH service, 22 by default. The port in L</host> is the HTTPS
+one and is not used for SSH.
+
+=cut
+
+has ssh_known_hosts     => ( is => 'ro', isa => Str, predicate => 'has_ssh_known_hosts' );
+has ssh_host_key        => ( is => 'ro', isa => Str, predicate => 'has_ssh_host_key' );
+has ssh_verify_host_key => ( is => 'ro', isa => Bool, default => 1 );
+has ssh_opts            => ( is => 'ro', isa => ArrayRef [Str], default => sub { [] } );
+
+=attr ssh_known_hosts
+
+A C<known_hosts> file to check the SSH host key against.
+
+=attr ssh_host_key
+
+The host key to expect: the type and the base64 key, like C<ssh-ed25519
+AAAA...>, as C<ssh-keyscan -t ed25519 HOST> prints it without the name.
+
+=attr ssh_verify_host_key
+
+True by default. False accepts any host key. Not allowed together with
+L</ssh_known_hosts> or L</ssh_host_key>.
+
+=attr ssh_opts
+
+Further C<Name=value> options for the SSH client, for a controller that
+needs an algorithm a current OpenSSH has switched off. They cannot weaken
+the checks above.
+
+=cut
+
 has ua => (
   is  => 'lazy',
   isa => InstanceOf ['LWP::UserAgent']
@@ -210,6 +299,18 @@ sub BUILD {
   WWW::iDRAC::Error::Validation->throw(
     message => 'verify_ssl => 0 with ssl_fingerprint drops the pin: either verify the certificate or set a fingerprint, not both'
   ) if !$self->verify_ssl && $self->has_ssl_fingerprint;
+  WWW::iDRAC::Error::Validation->throw(
+    message => 'ssh_port is a port number'
+  ) unless $self->ssh_port >= 1 && $self->ssh_port <= 65535;
+  WWW::iDRAC::Error::Validation->throw(
+    message => 'ssh_verify_host_key => 0 with ssh_known_hosts or ssh_host_key drops the check: either verify the host key or give it, not both'
+  ) if !$self->ssh_verify_host_key && ( $self->has_ssh_known_hosts || $self->has_ssh_host_key );
+  WWW::iDRAC::Error::Validation->throw(
+    message => 'ssh_known_hosts and ssh_host_key are two ways to say the same thing: give one'
+  ) if $self->has_ssh_known_hosts && $self->has_ssh_host_key;
+  WWW::iDRAC::Error::Validation->throw(
+    message => 'ssh_username and ssh_password go together'
+  ) if defined $self->ssh_username xor defined $self->ssh_password;
   return;
 }
 
@@ -238,6 +339,35 @@ sub _build_redfish {
 
 The L<WWW::iDRAC::Redfish> transport. Also the way to everything the facade
 does not cover.
+
+=cut
+
+has racadm => ( is => 'lazy', isa => Object, predicate => 'has_racadm' );
+
+sub _build_racadm {
+  my ( $self ) = @_;
+  # the HTTPS port in host is not the SSH port
+  my $host = $self->host;
+  $host =~ s/\A\[([0-9A-Fa-f:.]+)\](?::[0-9]+)?\z/$1/ or $host =~ s/:[0-9]+\z//;
+  return WWW::iDRAC::Racadm->new(
+    host            => $host,
+    port            => $self->ssh_port,
+    username        => $self->ssh_username // $self->username,
+    password        => $self->ssh_password // $self->password,
+    timeout         => $self->timeout,
+    enabled         => $self->ssh,
+    verify_host_key => $self->ssh_verify_host_key,
+    ssh_opts        => $self->ssh_opts,
+    ( $self->has_ssh_known_hosts ? ( known_hosts => $self->ssh_known_hosts ) : () ),
+    ( $self->has_ssh_host_key    ? ( host_key    => $self->ssh_host_key )    : () )
+  );
+}
+
+=attr racadm
+
+The L<WWW::iDRAC::Racadm> transport: the way to what Redfish lacks on an
+iDRAC 7 or 8, and to the text racadm prints. Not connected until a command is
+sent. May be given to the constructor, for a transport of your own.
 
 =cut
 
@@ -291,13 +421,45 @@ L<WWW::iDRAC::Manager>: the iDRAC itself.
 
 =cut
 
+has bios => ( is => 'lazy' );
+
+sub _build_bios { WWW::iDRAC::Bios->new( racadm => $_[0]->racadm ) }
+
+=attr bios
+
+L<WWW::iDRAC::Bios>: BIOS attributes, read and staged, over racadm.
+
+=cut
+
+has jobs => ( is => 'lazy' );
+
+sub _build_jobs { WWW::iDRAC::Jobs->new( racadm => $_[0]->racadm ) }
+
+=attr jobs
+
+L<WWW::iDRAC::Jobs>: the job queue, over racadm.
+
+=cut
+
+has virtual_media => ( is => 'lazy' );
+
+sub _build_virtual_media { WWW::iDRAC::VirtualMedia->new( racadm => $_[0]->racadm ) }
+
+=attr virtual_media
+
+L<WWW::iDRAC::VirtualMedia>: a remote image attached to the server, over
+racadm.
+
+=cut
+
 has capabilities => ( is => 'lazy' );
 
 sub _build_capabilities {
   my ( $self ) = @_;
   return WWW::iDRAC::Capabilities->new(
     redfish => $self->redfish,
-    areas   => { map { $_ => $self->$_ } qw( system power sensors logs manager ) }
+    racadm  => $self->racadm,
+    areas   => { map { $_ => $self->$_ } qw( system power sensors logs manager bios jobs virtual_media ) }
   );
 }
 
@@ -307,13 +469,20 @@ L<WWW::iDRAC::Capabilities>: what this controller is and what it can do.
 
 =cut
 
-sub logout { $_[0]->redfish->logout }
+sub logout {
+  my ( $self ) = @_;
+  my $redfish = $self->redfish->logout;
+  my $racadm  = $self->has_racadm ? $self->racadm->logout : 0;
+  return $redfish || $racadm ? 1 : 0;
+}
 
 =method logout
 
-Ends the session. An iDRAC allows only a few at a time, so call this when
-you are done. The session is also ended when the last object using it goes
-away, but do not rely on that at the very end of a program.
+Ends the Redfish session and closes the SSH connection, whichever there is,
+and returns true when there was one. An iDRAC allows only a few of each at a
+time, so call this when you are done. They are also ended when the last
+object using them goes away, but do not rely on that at the very end of a
+program.
 
 =cut
 

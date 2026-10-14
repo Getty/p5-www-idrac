@@ -5,6 +5,7 @@ use Test::More;
 use lib 't/lib';
 
 use FakeiDRAC;
+use FakeRacadm;
 use WWW::iDRAC;
 
 sub error_of (&) { my ( $code ) = @_; eval { $code->(); 1 } ? undef : $@ }
@@ -88,6 +89,49 @@ subtest 'no session is left behind' => sub {
   is( $fake->sessions, 1, 'with its session' );
   undef $system;
   is( $fake->sessions, 0, 'which ends with the part' );
+};
+
+subtest 'the SSH side' => sub {
+  my $idrac = WWW::iDRAC->new( host => 'idrac.example.org:8443', %login );
+  ok( !$idrac->has_racadm, 'racadm is not built before it is asked for' );
+  my $racadm = $idrac->racadm;
+  isa_ok( $racadm, 'WWW::iDRAC::Racadm' );
+  is( $racadm->host, 'idrac.example.org', 'the HTTPS port is not the SSH port' );
+  is( $racadm->port, 22, 'SSH is on 22' );
+  is( $racadm->username, 'root', 'the same login by default' );
+  is( $racadm->password, 'calvin', 'also the password' );
+  ok( $racadm->verify_host_key, 'the host key is verified' );
+  ok( $racadm->enabled, 'enabled' );
+  ok( !$racadm->connected, 'not connected' );
+
+  my $own = WWW::iDRAC->new( host => '[2001:db8::10]:8443', %login, ssh_username => 'ops', ssh_password => 'other', ssh_port => 2222,
+    ssh_host_key => 'ssh-ed25519 AAAA', ssh_opts => ['Ciphers=aes256-ctr'], timeout => 20 )->racadm;
+  is_deeply( [ $own->host, $own->port, $own->username, $own->password, $own->host_key, $own->timeout ], [ '2001:db8::10', 2222, 'ops', 'other', 'ssh-ed25519 AAAA', 20 ], 'its own login, port and key' );
+  is_deeply( $own->ssh_opts, ['Ciphers=aes256-ctr'], 'extra options' );
+  ok( !WWW::iDRAC->new( host => 'idrac.example.org', %login, ssh => 0 )->racadm->enabled, 'ssh => 0 reaches the transport' );
+  ok( !WWW::iDRAC->new( host => 'idrac.example.org', %login, ssh_verify_host_key => 0 )->racadm->verify_host_key, 'so does ssh_verify_host_key' );
+  is( WWW::iDRAC->new( host => 'idrac.example.org', %login, ssh_known_hosts => '/etc/h' )->racadm->known_hosts, '/etc/h', 'and ssh_known_hosts' );
+
+  for my $bad ( [ ssh_port => 0 ], [ ssh_port => 70000 ], [ ssh_username => 'ops' ], [ ssh_password => 'x' ],
+                [ ssh_verify_host_key => 0, ssh_host_key => 'ssh-ed25519 AAAA' ], [ ssh_verify_host_key => 0, ssh_known_hosts => '/x' ],
+                [ ssh_known_hosts => '/x', ssh_host_key => 'ssh-ed25519 AAAA' ] ) {
+    isa_ok( error_of { WWW::iDRAC->new( host => 'idrac.example.org', %login, @$bad ) }, 'WWW::iDRAC::Error::Validation', join ' ', map { $_ // '' } @$bad );
+  }
+
+  my $fake = FakeRacadm->new;
+  my $with = WWW::iDRAC->new( host => 'idrac.example.org', %login, racadm => $fake->transport );
+  is( $with->bios->racadm, $with->racadm, 'the capability classes share the transport' );
+  is( $with->jobs->racadm, $with->racadm, 'all of them' );
+  is( $with->virtual_media->racadm, $with->racadm, 'all of them' );
+  is( $with->bios->get('BiosBootSettings.BootMode'), 'Bios', 'and reach the controller' );
+  ok( $fake->connected, 'connected' );
+  is( $with->logout, 1, 'logout closes the SSH connection too' );
+  ok( !$fake->connected, 'closed' );
+  is( $with->logout, 0, 'and says there was nothing the second time' );
+  my $idle = WWW::iDRAC->new( host => 'idrac.example.org', %login, ua => FakeiDRAC->new );
+  $idle->system->info;
+  is( $idle->logout, 1, 'with a Redfish session only' );
+  ok( !$idle->has_racadm, 'racadm never built' );
 };
 
 done_testing;

@@ -3,6 +3,7 @@ package WWW::iDRAC::Capabilities;
 # ABSTRACT: What this iDRAC is and what it can do
 
 use Moo;
+use Scalar::Util qw( blessed );
 use Types::Standard qw( HashRef );
 use WWW::iDRAC::Error::Validation;
 use WWW::iDRAC::Util qw( text );
@@ -22,6 +23,11 @@ our $VERSION = '0.001';
 
 The facts are read once, on first use. L</supports> asks the controller
 each time, because what it offers can change with the state of the server.
+
+Generation, model, firmware and Redfish version come from Redfish. The
+license does not: it is read over racadm, on the first call of L</license>
+or L</facts>, which is the only place in this class that opens an SSH
+connection. Whoever only wants the generation never does.
 
 =cut
 
@@ -48,9 +54,18 @@ Required. The capability objects by the name of their area.
 
 =cut
 
-has facts => ( is => 'lazy' );
+has racadm => ( is => 'ro' );
 
-sub _build_facts {
+=attr racadm
+
+The L<WWW::iDRAC::Racadm> transport the license is read through. Without
+it, or with it switched off, the license is C<undef>.
+
+=cut
+
+has _redfish_facts => ( is => 'lazy' );
+
+sub _build__redfish_facts {
   my ( $self ) = @_;
   my %doc = ( root => $self->redfish->root );
   for my $part ( [ system => 'Systems' ], [ manager => 'Managers' ] ) {
@@ -59,6 +74,30 @@ sub _build_facts {
     $doc{ $part->[0] } = ref $doc eq 'HASH' ? $doc : {};
   }
   return $self->facts_from(%doc);
+}
+
+has license => ( is => 'lazy' );
+
+sub _build_license {
+  my ( $self ) = @_;
+  my $racadm = $self->racadm;
+  return undef unless $racadm && $racadm->enabled;
+  my $text;
+  if ( !eval { $text = $racadm->run( license => 'view' ); 1 } ) {
+    my $error = $@;
+    die $error unless blessed $error && $error->isa('WWW::iDRAC::Error');
+    # a license that cannot be read is no fact: whether the controller has no
+    # SSH, refuses the login or does not answer, it is undef
+    return undef;
+  }
+  return $self->license_from($text);
+}
+
+has facts => ( is => 'lazy' );
+
+sub _build_facts {
+  my ( $self ) = @_;
+  return { %{ $self->_redfish_facts }, license => $self->license };
 }
 
 sub facts_from {
@@ -74,7 +113,7 @@ sub facts_from {
 
 =attr facts
 
-The five facts below as one hash.
+The five facts below as one hash. Reading it reads the license too.
 
 =method facts_from
 
@@ -100,11 +139,36 @@ names the generation of the server: 12G is iDRAC 7, 13G is iDRAC 8, 14G to
 
 =cut
 
-sub generation      { $_[0]->facts->{generation} }
-sub model           { $_[0]->facts->{model} }
-sub firmware        { $_[0]->facts->{firmware} }
-sub redfish_version { $_[0]->facts->{redfish_version} }
-sub license         { $_[0]->facts->{license} }
+my %RANK = ( basic => 1, express => 2, enterprise => 3, datacenter => 4 );
+
+sub license_from {
+  my ( $class, $raw ) = @_;
+  my $text = defined $raw && !ref $raw ? $raw : '';
+  my ($best) = sort { $RANK{$b} <=> $RANK{$a} }
+    map { lc $_ } $text =~ /^\s*License Description\s*=.*?\b(basic|express|enterprise|datacenter)\b/gim;
+  return $best;
+}
+
+=attr license
+
+C<basic>, C<express>, C<enterprise>, C<datacenter>, or C<undef> when it
+cannot be read: racadm is switched off, SSH does not answer or refuses the
+login, or the controller lists no license. Of several licenses the highest
+counts.
+
+=method license_from
+
+    my $license = WWW::iDRAC::Capabilities->license_from($text);
+
+The license out of what C<racadm license view> printed, from the
+C<License Description> lines (C<iDRAC8 Express License>), without I/O.
+
+=cut
+
+sub generation      { $_[0]->_redfish_facts->{generation} }
+sub model           { $_[0]->_redfish_facts->{model} }
+sub firmware        { $_[0]->_redfish_facts->{firmware} }
+sub redfish_version { $_[0]->_redfish_facts->{redfish_version} }
 
 =method generation
 
@@ -122,15 +186,11 @@ The firmware version of the iDRAC.
 
 The version of Redfish the controller speaks.
 
-=method license
-
-C<undef> in this version: the license is not read yet.
-
 =cut
 
 sub supports {
   my ( $self, $name ) = @_;
-  my ( $area, $method ) = defined $name && !ref $name ? $name =~ /\A([a-z]+)\.([a-z_]+)\z/ : ();
+  my ( $area, $method ) = defined $name && !ref $name ? $name =~ /\A([a-z_]+)\.([a-z_]+)\z/ : ();
   WWW::iDRAC::Error::Validation->throw( message => 'unknown capability '.( $name // '' ) )
     unless defined $area && $self->areas->{$area};
   return $self->areas->{$area}->supports($method);

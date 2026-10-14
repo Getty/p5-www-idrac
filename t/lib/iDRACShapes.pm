@@ -10,7 +10,7 @@ use warnings;
 use Exporter qw( import );
 use Test::More;
 
-our @EXPORT = qw( shape_ok read_methods );
+our @EXPORT = qw( shape_ok read_methods racadm_methods );
 
 our %KEYS = (
   'system.info'            => [qw( manufacturer model service_tag serial uuid asset_tag hostname bios_version power_state health cpu_count cpu_model memory_gib )],
@@ -25,10 +25,29 @@ our %KEYS = (
   'logs.sel'               => [qw( id created severity message message_id )],
   'logs.lifecycle'         => [qw( id created severity message message_id )],
   'manager.info'           => [qw( model firmware health date_time uuid )],
-  'manager.network'        => [qw( hostname fqdn mac ipv4 ipv6 dns )]
+  'manager.network'        => [qw( hostname fqdn mac ipv4 ipv6 dns )],
+  # served over racadm, and called with arguments: see racadm_methods
+  'bios.group'             => [qw( name value read_only )],
+  'jobs.list'              => [qw( id name status message message_id percent_complete start_time expiration_time finished )],
+  'jobs.get'               => [qw( id name status message message_id percent_complete start_time expiration_time finished )],
+  'virtual_media.status'   => [qw( connected share username attach_mode boot_once enabled )]
 );
 
-sub read_methods { sort keys %KEYS }
+# the reading methods that need no argument and are served over Redfish
+sub read_methods { sort grep { !/\A(?:bios|jobs|virtual_media)\./ } keys %KEYS }
+
+# the reading methods served over racadm, each with the arguments to call it
+# with: [ 'area.method', @arguments ]. jobs.get needs the id of a job the
+# controller has, which the test takes from jobs.list.
+sub racadm_methods {
+  return (
+    [ 'bios.groups' ],
+    [ 'bios.group', 'BiosBootSettings' ],
+    [ 'bios.get', 'BiosBootSettings.BootMode' ],
+    [ 'jobs.list' ],
+    [ 'virtual_media.status' ]
+  );
+}
 
 sub shape_ok {
   my ( $got, $name ) = @_;
