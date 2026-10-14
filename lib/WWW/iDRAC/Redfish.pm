@@ -21,7 +21,8 @@ our $VERSION = '0.001';
 
 =description
 
-Everything L<WWW::iDRAC> does in phase 1 goes through this class. It logs in,
+Everything L<WWW::iDRAC> does over Redfish goes through this class (BIOS,
+jobs, virtual media and the license go through L<WWW::iDRAC::Racadm>). It logs in,
 keeps the session token, logs in once more when the controller refuses the
 token, and finds the system, the chassis and the manager without assuming
 their names.
@@ -87,7 +88,15 @@ has _session_path => ( is => 'rw', isa => Maybe [Str] );
 has _root         => ( is => 'rw', isa => Maybe [HashRef] );
 has _located      => ( is => 'ro', isa => HashRef, default => sub { {} } );
 
-with 'WWW::iDRAC::Role::HTTP';
+with 'WWW::iDRAC::Role::HTTP', 'WWW::iDRAC::Role::Transport';
+
+sub transport_name { 'redfish' }
+
+=method transport_name
+
+C<redfish>, see L<WWW::iDRAC::Role::Transport>.
+
+=cut
 
 # the transports that may hold a session, held weakly, for the END block below
 my %LIVE;

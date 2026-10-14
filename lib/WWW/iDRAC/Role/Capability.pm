@@ -9,19 +9,22 @@ use Moo::Role;
 
 our $VERSION = '0.001';
 
-requires 'area';
+with 'WWW::iDRAC::Role::Area';
 
 =description
 
-A capability class answers for one area (C<system>, C<power>, C<sensors>,
-C<logs>, C<manager>). It reaches the controller only through L</redfish>,
-returns translated data, never raw documents, and turns a resource this
-controller does not have into L<WWW::iDRAC::Error::Unsupported>.
+A capability class that is served over Redfish answers for one area
+(C<system>, C<power>, C<sensors>, C<logs>, C<manager>). It reaches the
+controller only through L</redfish>, returns translated data, never raw
+documents, and turns a resource this controller does not have into
+L<WWW::iDRAC::Error::Unsupported>. The classes that are served over racadm
+use L<WWW::iDRAC::Role::Racadm> instead; what both share is
+L<WWW::iDRAC::Role::Area>, with C<unsupported> and C<supports>.
 
 Each public method C<x> has a C<probe_x> beside it, which fetches the
 documents the method starts from, not only the links to them, and throws
-where the method would. L</supports> is built on those, so its answer comes
-from what the controller offers.
+where the method would. L<WWW::iDRAC::Role::Area/supports> is built on
+those, so its answer comes from what the controller offers.
 
 =cut
 
@@ -33,24 +36,6 @@ has redfish => (
 =attr redfish
 
 Required. The L<WWW::iDRAC::Redfish> transport.
-
-=cut
-
-sub unsupported {
-  my ( $self, $method, $reason ) = @_;
-  my $capability = $self->area.'.'.$method;
-  WWW::iDRAC::Error::Unsupported->throw(
-    message    => $capability.' is not available on this iDRAC: '.$reason,
-    capability => $capability,
-    reason     => $reason
-  );
-}
-
-=method unsupported
-
-    $self->unsupported( cycle => 'reset type PowerCycle is not offered' );
-
-Throws L<WWW::iDRAC::Error::Unsupported> for a method of this area.
 
 =cut
 
@@ -155,26 +140,6 @@ sub linked_path {
     my $path = $self->linked_path( $chassis, Thermal => 'temperatures' );
 
 The address a document gives for one of its parts.
-
-=cut
-
-sub supports {
-  my ( $self, $method ) = @_;
-  my $probe = defined $method && $method =~ /\A[a-z_]+\z/ ? $self->can( 'probe_'.$method ) : undef;
-  WWW::iDRAC::Error::Validation->throw( message => 'unknown capability '.$self->area.'.'.( $method // '' ) ) unless $probe;
-  return 1 if eval { $self->$probe; 1 };
-  my $error = $@;
-  return 0 if blessed $error && $error->isa('WWW::iDRAC::Error::Unsupported');
-  die $error;
-}
-
-=method supports
-
-    if ( $idrac->power->supports('cycle') ) { ... }
-
-True when the method of that name can be served by this controller. A name
-that is no method of the area is a L<WWW::iDRAC::Error::Validation>; an error
-on the way to the answer is thrown as it is.
 
 =cut
 

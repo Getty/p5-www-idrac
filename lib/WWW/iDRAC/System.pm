@@ -166,7 +166,7 @@ sub probe_nics       { $_[0]->linked_document( $_[0]->resource( Systems => 'nics
 
 =method probe_nics
 
-What L<WWW::iDRAC::Role::Capability/supports> asks.
+What L<WWW::iDRAC::Role::Area/supports> asks.
 
 =cut
 

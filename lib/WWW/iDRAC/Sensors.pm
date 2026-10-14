@@ -152,7 +152,7 @@ sub probe_power_supplies { $_[0]->_document( Power   => 'power_supplies' ) }
 
 =method probe_power_supplies
 
-What L<WWW::iDRAC::Role::Capability/supports> asks.
+What L<WWW::iDRAC::Role::Area/supports> asks.
 
 =cut
 

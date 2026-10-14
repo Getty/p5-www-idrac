@@ -132,7 +132,7 @@ sub probe_restart { $_[0]->reset_action }
 
 =method probe_restart
 
-What L<WWW::iDRAC::Role::Capability/supports> asks.
+What L<WWW::iDRAC::Role::Area/supports> asks.
 
 =cut
 

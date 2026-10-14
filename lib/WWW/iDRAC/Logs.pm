@@ -184,7 +184,7 @@ sub probe_clear_sel { $_[0]->clear_action }
 
 =method probe_clear_sel
 
-What L<WWW::iDRAC::Role::Capability/supports> asks.
+What L<WWW::iDRAC::Role::Area/supports> asks.
 
 =cut
 

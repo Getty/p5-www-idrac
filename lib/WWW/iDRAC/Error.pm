@@ -20,8 +20,9 @@ our $VERSION = '0.001';
 
 Every error WWW::iDRAC raises is an object of one of four subclasses:
 L<WWW::iDRAC::Error::Validation> for wrong arguments,
-L<WWW::iDRAC::Error::Network> when no HTTP answer arrived,
-L<WWW::iDRAC::Error::API> when the iDRAC answered with an error, and
+L<WWW::iDRAC::Error::Network> when no answer arrived (HTTP or SSH),
+L<WWW::iDRAC::Error::API> when the iDRAC answered with an error (an HTTP
+status, or an C<ERROR:> that racadm printed), and
 L<WWW::iDRAC::Error::Unsupported> when this controller does not have what was
 asked for. All of them stringify to their message, so plain C<$@> matching
 keeps working.

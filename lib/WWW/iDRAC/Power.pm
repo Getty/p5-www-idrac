@@ -236,7 +236,7 @@ sub probe_consumption { $_[0]->_power_document('consumption') }
 
 =method probe_consumption
 
-What L<WWW::iDRAC::Role::Capability/supports> asks. C<probe_off> and
+What L<WWW::iDRAC::Role::Area/supports> asks. C<probe_off> and
 C<probe_restart> answer for the gentle form.
 
 =cut
