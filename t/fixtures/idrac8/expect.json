@@ -1,9 +1,11 @@
 {
-   "empty" : [],
+   "empty" : [ "jobs.list" ],
+   "license" : "express",
    "undef" : {
       "manager.network" : [ "fqdn" ],
       "system.info" : [ "asset_tag" ],
-      "system.nics" : [ "link_up" ]
+      "system.nics" : [ "link_up" ],
+      "virtual_media.status" : [ "attach_mode", "boot_once", "enabled", "share", "username" ]
    },
-   "unsupported" : [ "power.cycle", "power.off", "system.memory" ]
+   "unsupported" : [ "power.cycle", "power.off", "system.memory", "virtual_media.connect", "virtual_media.disconnect" ]
 }

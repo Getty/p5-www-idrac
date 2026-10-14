@@ -1,10 +1,12 @@
 {
    "empty" : [],
+   "license" : "enterprise",
    "undef" : {
       "manager.network" : [ "fqdn" ],
       "sensors.power_supplies" : [ "output_watts" ],
       "system.info" : [ "asset_tag", "hostname" ],
-      "system.nics" : [ "health", "link_up" ]
+      "system.nics" : [ "health", "link_up" ],
+      "virtual_media.status" : [ "share", "username" ]
    },
-   "unsupported" : [ "power.cycle", "power.restart" ]
+   "unsupported" : [ "bios.groups", "power.cycle", "power.restart" ]
 }
