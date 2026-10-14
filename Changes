@@ -1,6 +1,35 @@
 Revision history for WWW-iDRAC
 
 {{$NEXT}}
+    - Phase 2: racadm over SSH as the second transport, for what Redfish
+      lacks on an iDRAC 7 and 8. Measured on 2026-10-14 against an iDRAC 7
+      (firmware 2.65) and an iDRAC 8 (2.50), reading only; nothing that
+      writes has run against hardware
+    - WWW::iDRAC::Racadm: one command in, the text out; *_from functions
+      for quoting, errors and [Key=...] / [Job ID=...] blocks without I/O;
+      racadm's ERROR: text becomes Error::API with its code in message_id
+    - WWW::iDRAC::Racadm::SSH: the I/O over Net::OpenSSH; host key checked,
+      pinned with ssh_host_key or taken from ssh_known_hosts, ssh_verify_host_key
+      => 0 only on request; one login attempt; the password is no part of a
+      message
+    - WWW::iDRAC::Bios: groups, group, get, set (staged, read-only refused
+      before writing), commit (creates the job, no restart unless asked)
+    - WWW::iDRAC::Jobs: list, get, delete, wait
+    - WWW::iDRAC::VirtualMedia: status, connect, disconnect
+    - capabilities->license from racadm license view, read only on demand,
+      so generation, model and firmware never open an SSH connection
+    - supports() answers for bios, jobs and virtual_media, including a missing
+      license (SWC0242) for virtual media on an iDRAC 8 with Express
+    - Facade: ssh, ssh_username, ssh_password, ssh_port, ssh_known_hosts,
+      ssh_host_key, ssh_verify_host_key, ssh_opts, racadm; logout closes the
+      SSH connection too; Phase-2 methods are Error::Unsupported before
+      anything is sent when ssh => 0 or nothing listens on the SSH port
+    - Role::Transport (transport_name, logout) and Role::Area (unsupported,
+      supports) for the two transports; the Redfish classes are unchanged
+    - Error::API: http_status is undef for racadm errors, is_not_found knows
+      RAC992, RAC1019 and RAC1020; Error::Network has a cause for SSH failures
+    - t/92-live-racadm.t, reading only unless IDRAC_LIVE_DESTRUCTIVE=1;
+      racadm recordings of both generations in t/fixtures
     - Constructor arguments are validated as WWW::iDRAC::Error::Validation
       without echoing the rejected value
     - off, restart, cycle and on reject positional arguments and unknown keys
