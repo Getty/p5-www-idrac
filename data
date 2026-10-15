@@ -1,0 +1,19 @@
+---
+claimed_at: 2026-10-14T02:01:58Z
+claimed_by: phase2
+class: standard
+completed: 2026-10-15T14:42:59Z
+created: 2026-10-05T02:08:13Z
+id: 3
+priority: medium
+started: 2026-10-14T02:01:58Z
+status: done
+title: 'Phase 2: a second transport for what Redfish lacks on iDRAC 7/8'
+updated: 2026-10-15T14:42:59Z
+---
+
+BIOS attributes, job queue, virtual media. WS-Man or racadm over SSH is decided by what card 1 measures (spec section 9). Brings the transport abstraction.
+
+Phase 2 built, 6 commits 82c578d..453efe0, nothing pushed. Decision: racadm over SSH (spec s9, measured read-only 2026-10-14 on R720xd/iDRAC7 FW 2.65 and T330/iDRAC8 FW 2.50; no legacy SSH algorithms needed, kbd-interactive login, exit status always 0 so errors parsed from text). Built: Role::Transport/Area, Racadm + Racadm::SSH (Net::OpenSSH, strict host key, ssh_host_key/ssh_known_hosts), Bios, Jobs, VirtualMedia, capabilities->license, facade ssh_* attrs. Tests: prove -lr t green (25 files, 197 tests), dzil test --all green (223); read-only live run t/92-live-racadm.t passed on both devices. NOT run: anything that writes (bios set/commit, jobs delete, virtual_media connect/disconnect), only vs FakeRacadm; no power switching. iDRAC8 Express: virtual_media connect/disconnect Unsupported (SWC0242). Open: write-path output forms (set/jobqueue create/remoteimage -c, attached status) unmeasured; no release/tag.
+
+2026-10-15 14:42 Phase 2 review by the repo agents (worker, test-writer, doc-writer). Fixed: SSH failure causes misclassified, racadm errors after the first line passed as success, option injection via leading '-', license swallowing host-key/auth errors, sanitizer missing the remoteimage -s form, unmarked unmeasured write paths. Commit cd35cd0 on branch worktree-phase2-review (not merged to main, not pushed). prove -lr t: Files=26 Tests=216 PASS; dzil test --all: 238 PASS. Racadm writes still never run against hardware.
