@@ -36,6 +36,7 @@ subtest 'list and get' => sub {
     percent_complete => 100, start_time => 'Now', expiration_time => 'Not Applicable', finished => 1
   }, 'translated, the message number apart' );
   is( $list->[1]{finished}, 0, 'a running job is not finished' );
+  is( $list->[1]{expiration_time}, 'Not Applicable', 'the expiration time as the controller prints it' );
   is( $list->[1]{percent_complete}, 40, 'with its progress' );
 
   my $job = $idrac->jobs->get('JID_000000000002');
@@ -79,6 +80,30 @@ TEXT
   is( $jobs->[2]{finished}, 0, 'scheduled is not' );
   is( $jobs->[2]{name}, undef, 'a key that is missing is undef' );
   is_deeply( WWW::iDRAC::Jobs->jobs_from(undef), [], 'nothing' );
+  is( $jobs->[0]{expiration_time}, 'TIME_NA', 'the expiration time as printed, brackets removed' );
+  is( $jobs->[1]{expiration_time}, undef, 'undef where missing' );
+  is( $jobs->[0]{start_time}, '20261014120000', 'the start time' );
+
+  my $other = WWW::iDRAC::Jobs->jobs_from( "[Key=BIOS.Setup.1-1#BiosBootSettings]\nStatus=Completed\n[Job ID=JID_000000000007]\nStatus=Scheduled\n" );
+  is_deeply( [ map { $_->{id} } @$other ], ['JID_000000000007'], 'a [Key=...] block is no job' );
+  is_deeply( WWW::iDRAC::Jobs->jobs_from("[Key=BIOS.Setup.1-1#A]\nStatus=Completed\n"), [], 'and alone it is no job at all' );
+
+  my %finished = ( Cancelled => 1, Canceled => 1, Failed => 1, 'Completed with Errors' => 1, Completed => 1, Running => 0, Scheduled => 0, New => 0, 'Downloading' => 0 );
+  for my $status ( sort keys %finished ) {
+    my ($job) = @{ WWW::iDRAC::Jobs->jobs_from("[Job ID=JID_1]\nStatus=$status\n") };
+    is( $job->{finished}, $finished{$status}, 'finished for '.$status );
+  }
+  my ($nostatus) = @{ WWW::iDRAC::Jobs->jobs_from("[Job ID=JID_1]\nJob Name=x\n") };
+  is( $nostatus->{finished}, 0, 'a job without a status is not finished' );
+};
+
+subtest 'get without a job in the answer' => sub {
+  my $fake  = FakeRacadm->new( replies => { 'racadm jobqueue view -i JID_000000000001' => "-------- JOB --------\n------------\n" } );
+  my $idrac = WWW::iDRAC->new( host => 'idrac.test', username => 'root', password => 'calvin', ua => FakeiDRAC->new, racadm => $fake->transport );
+  my $e = error_of { $idrac->jobs->get('JID_000000000001') };
+  isa_ok( $e, 'WWW::iDRAC::Error::Unsupported', 'a text without a job block' );
+  is( $e && $e->capability, 'jobs.get', 'for the method' );
+  like( $e && $e->reason, qr/JID_000000000001/, 'which names the job' );
 };
 
 subtest 'delete' => sub {
@@ -92,6 +117,13 @@ subtest 'delete' => sub {
   ok( $e->is_not_found ? 0 : 1, 'not as a missing one' );
   isa_ok( error_of { $idrac->jobs->delete('all') }, 'WWW::iDRAC::Error::Validation', 'not "all"' );
   isa_ok( error_of { $idrac->jobs->delete('--all') }, 'WWW::iDRAC::Error::Validation', 'not an option' );
+  isa_ok( error_of { $idrac->jobs->delete('-d') }, 'WWW::iDRAC::Error::Validation', 'nor -d' );
+
+  my $banner = FakeRacadm->new( replies => { 'racadm jobqueue delete -i JID_000000000001' => "Security banner of the site\nERROR: RAC1033: The job cannot be deleted.\n" } );
+  my $bannered = WWW::iDRAC->new( host => 'idrac.test', username => 'root', password => 'calvin', ua => FakeiDRAC->new, racadm => $banner->transport );
+  $e = error_of { $bannered->jobs->delete('JID_000000000001') };
+  isa_ok( $e, 'WWW::iDRAC::Error::API', 'an error after a banner' );
+  is( $e && $e->message_id, 'RAC1033', 'with its code' );
 };
 
 subtest 'wait' => sub {

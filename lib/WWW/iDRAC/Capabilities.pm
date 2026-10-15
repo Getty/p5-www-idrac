@@ -26,8 +26,10 @@ each time, because what it offers can change with the state of the server.
 
 Generation, model, firmware and Redfish version come from Redfish. The
 license does not: it is read over racadm, on the first call of L</license>
-or L</facts>, which is the only place in this class that opens an SSH
-connection. Whoever only wants the generation never does.
+or L</facts>. L</supports> opens an SSH connection as well when it is asked
+about a method served over racadm (C<bios.*>, C<jobs.*>, C<virtual_media.*>),
+because the controller itself is asked. Whoever only wants the generation,
+and asks L</supports> about the Redfish areas only, never opens one.
 
 =cut
 
@@ -81,14 +83,17 @@ has license => ( is => 'lazy' );
 sub _build_license {
   my ( $self ) = @_;
   my $racadm = $self->racadm;
-  return undef unless $racadm && $racadm->enabled;
+  return unless $racadm && $racadm->enabled;
   my $text;
   if ( !eval { $text = $racadm->run( license => 'view' ); 1 } ) {
     my $error = $@;
-    die $error unless blessed $error && $error->isa('WWW::iDRAC::Error');
-    # a license that cannot be read is no fact: whether the controller has no
-    # SSH, refuses the login or does not answer, it is undef
-    return undef;
+    # what says racadm is not to be had here is undef, as the areas served
+    # over it are Unsupported for it (WWW::iDRAC::Role::Racadm): nothing on
+    # the SSH port, or racadm refuses to show the license. A failure on the
+    # way, a refused login or host key, a timeout, is thrown and not kept.
+    return if blessed $error && $error->isa('WWW::iDRAC::Error::Network') && ( $error->cause // '' ) eq 'refused';
+    return if blessed $error && $error->isa( $racadm->api_error_class );
+    die $error;
   }
   return $self->license_from($text);
 }
@@ -151,10 +156,15 @@ sub license_from {
 
 =attr license
 
-C<basic>, C<express>, C<enterprise>, C<datacenter>, or C<undef> when it
-cannot be read: racadm is switched off, SSH does not answer or refuses the
-login, or the controller lists no license. Of several licenses the highest
-counts.
+C<basic>, C<express>, C<enterprise>, C<datacenter>, or C<undef> where racadm
+is not to be had: it is switched off (C<< ssh => 0 >>), the SSH port refuses
+the connection, racadm answers the command with an error
+(L<WWW::iDRAC::Error::API>), or the controller lists no license. Of several
+licenses the highest counts. Everything else is thrown and not remembered, so
+the next read tries again: L<WWW::iDRAC::Error::Validation> (a bad
+C<ssh_opts> entry, say) and every other L<WWW::iDRAC::Error::Network>, that
+is a refused login, a host key that is unknown or changed, a timeout, an
+unreachable controller and the rest.
 
 =method license_from
 
@@ -203,7 +213,12 @@ sub supports {
 True when this controller can serve the method of that name, given as
 C<area.method>. The answer comes from what the controller offers, the
 resources it has and the values its actions allow, not from a table of
-versions. A name that is no method is a L<WWW::iDRAC::Error::Validation>.
+versions. For C<bios.*>, C<jobs.*> and C<virtual_media.*> that means asking
+racadm over SSH, so the call can throw what a racadm command throws
+(L<WWW::iDRAC::Error::Network>, for one); it answers false where the
+license is missing, nothing listens on the SSH port or racadm is switched
+off. A name that
+is no method is a L<WWW::iDRAC::Error::Validation>.
 
 =cut
 

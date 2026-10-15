@@ -90,6 +90,25 @@ subtest 'a forked child does not end the parent session' => sub {
   is( $fake->sessions, 0, 'the parent ends it itself' );
 };
 
+subtest 'the process that made the object ends its session' => sub {
+  my $fake    = FakeiDRAC->new;
+  my $redfish = transport($fake);
+  $redfish->get($system);
+  {
+    # as in a child forked after the module was loaded, which makes its own transport
+    no warnings 'once';
+    local $WWW::iDRAC::Redfish::PID = $$ + 1;
+    is( $redfish->logout, 1, 'an object made in this process ends its session, wherever the module was loaded' );
+  }
+  is( $fake->sessions, 0, 'gone' );
+  $redfish->get($system);
+  $redfish->{_pid} = $$ + 1;    # as in a child forked after the object was made
+  is( $redfish->logout, 0, 'one made in another process does not' );
+  is( $fake->sessions, 1, 'and the session stays' );
+  $redfish->{_pid} = $$;
+  is( $redfish->logout, 1, 'until its own process ends it' );
+};
+
 subtest 'a login without a path to the session' => sub {
   my $fake    = FakeiDRAC->new( bare_session => 1 );
   my $redfish = transport($fake);

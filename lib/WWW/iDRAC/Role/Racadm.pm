@@ -4,6 +4,7 @@ package WWW::iDRAC::Role::Racadm;
 
 use Scalar::Util qw( blessed );
 use WWW::iDRAC::Error::Unsupported;
+use WWW::iDRAC::Racadm;
 use Moo::Role;
 
 our $VERSION = '0.001';
@@ -20,11 +21,13 @@ anything it cannot take back.
 
 Three things are a controller's fact and not an error, and become
 C<Unsupported> with the reason: racadm is switched off in the facade
-(C<< ssh => 0 >>), nothing listens on the SSH port of the controller, and a
-license the command needs is missing (C<SWC0242>, measured on an iDRAC 8
-with an Express license for virtual media). A refused login, a changed host
-key and a timeout are not facts about the controller but about the way to
-it, and stay L<WWW::iDRAC::Error::Network>.
+(C<< ssh => 0 >>), nothing listens on the SSH port of the controller (a
+L<WWW::iDRAC::Error::Network> with the C<cause> C<refused>, and only that
+one), and a license the command needs is missing (C<SWC0242>, measured on an
+iDRAC 8 with an Express license for virtual media). A refused login, a changed
+host key, a timeout, an unreachable controller and every other failure on the
+way are not facts about the controller but about the way to it, and stay
+L<WWW::iDRAC::Error::Network>.
 
 =cut
 
@@ -62,6 +65,15 @@ Sends one racadm command, the words after the method name, on behalf of the
 named method of this area and returns what racadm printed. The controller-side facts above are
 L<WWW::iDRAC::Error::Unsupported> for that method; every other error is
 thrown as L<WWW::iDRAC::Racadm/run> throws it.
+
+=cut
+
+sub racadm_class { 'WWW::iDRAC::Racadm' }
+
+=method racadm_class
+
+The class whose functions without I/O (C<text_from>, C<blocks_from>,
+C<quote_value>) the translations of the area use, L<WWW::iDRAC::Racadm>.
 
 =cut
 

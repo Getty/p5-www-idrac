@@ -70,6 +70,9 @@ subtest 'what connect refuses' => sub {
     'a password with a quote'   => [ location => 'http://h/a.iso', username => 'u', password => 'p"q' ],
     'a password with a dollar'  => [ location => 'http://h/a.iso', username => 'u', password => 'p$q' ],
     'an option'                 => [ location => 'http://h/a.iso', speed => 1 ],
+    'an NFS host that is an option' => [ location => '-f:/export/a.iso' ],
+    'a user that is an option'  => [ location => '//h/s/a.iso', username => '-d', password => 'p' ],
+    'a password that is an option' => [ location => '//h/s/a.iso', username => 'u', password => '-f' ],
   );
   for my $name ( sort keys %case ) {
     my $e = error_of { $idrac->virtual_media->connect( @{ $case{$name} } ) };

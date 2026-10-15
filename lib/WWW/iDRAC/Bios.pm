@@ -5,7 +5,6 @@ package WWW::iDRAC::Bios;
 use Moo;
 use Scalar::Util qw( blessed );
 use WWW::iDRAC::Error::Validation;
-use WWW::iDRAC::Racadm;
 use WWW::iDRAC::Util qw( text );
 use namespace::autoclean;
 
@@ -41,6 +40,13 @@ it. Nothing here restarts the server unless C<commit> is asked to.
 
 Which groups and attributes exist depends on the server and its BIOS; an
 attribute the BIOS shows read-only (racadm marks it C<#>) is read-only here.
+That marker is taken from Dell's documentation; the recordings of the two
+controllers hold no such attribute.
+
+B<Reading was measured, writing was not.> Not run against hardware, tested
+against a fake only: L</set>, L</commit>, that a staged change is not shown
+by L</get>, how L</set> recognises a pending change, and the job id that
+L</commit> looks for in the answer.
 
 =cut
 
@@ -63,7 +69,7 @@ sub _attribute_name {
 
 sub groups_from {
   my ( $class, $raw ) = @_;
-  return [ grep { /\A[A-Za-z][A-Za-z0-9]*\z/ } map { s/\A\s+|\s+\z//gr } split /\n/, WWW::iDRAC::Racadm->text_from($raw) ];
+  return [ grep { /\A[A-Za-z][A-Za-z0-9]*\z/ } map { s/\A\s+|\s+\z//gr } split /\n/, $class->racadm_class->text_from($raw) ];
 }
 
 sub groups {
@@ -71,8 +77,10 @@ sub groups {
   my $text;
   if ( !eval { $text = $self->racadm_run( groups => get => 'BIOS' ); 1 } ) {
     my $error = $@;
-    die $error unless blessed $error && $error->isa('WWW::iDRAC::Error::API');
-    # an iDRAC 7 answers "Unable to perform requested operation"
+    # an iDRAC 7 answers "ERROR: Unable to perform requested operation.",
+    # without a code; any other error is one
+    die $error unless blessed $error && $error->isa('WWW::iDRAC::Error::API')
+      && !defined $error->message_id && ( $error->api_message // '' ) =~ /\AUnable to perform requested operation\b/;
     $self->unsupported( groups => 'the controller does not list its BIOS groups ('.$error->api_message.')' );
   }
   my $groups = $self->groups_from($text);
@@ -96,7 +104,7 @@ The translation behind L</groups>, without I/O.
 
 sub group_from {
   my ( $class, $raw ) = @_;
-  my ($block) = WWW::iDRAC::Racadm->blocks_from($raw);
+  my ($block) = $class->racadm_class->blocks_from($raw);
   return undef unless $block;
   return {
     fqdd       => ( $block->{id} =~ /\A([^#]+)#/ )[0],
@@ -152,8 +160,8 @@ sub get {
     my $mode = $idrac->bios->get('BiosBootSettings.BootMode');
 
 The value of one attribute, C<undef> when it is empty. Where the controller
-has a staged change that is not applied yet, this is the value now, not the
-pending one. An attribute the BIOS does not have is
+has a staged change that is not applied yet, this is meant to be the value
+now, not the pending one; that racadm shows it so was never seen. An attribute the BIOS does not have is
 L<WWW::iDRAC::Error::API> with C<is_not_found>.
 
 =cut
@@ -161,8 +169,8 @@ L<WWW::iDRAC::Error::API> with C<is_not_found>.
 sub set {
   my ( $self, $name, $value ) = @_;
   $self->_attribute_name($name);
-  # the same limits as for any argument sent to racadm, and before anything is read
-  WWW::iDRAC::Racadm->quote($value);
+  # the same limits as for any value sent to racadm, and before anything is read
+  $self->racadm_class->quote_value($value);
   my ( $entry, $fqdd ) = $self->_entry( set => $name );
   WWW::iDRAC::Error::Validation->throw( message => 'BIOS.'.$name.' is read-only' ) if $entry->{read_only};
   my $answer = $self->racadm_run( set => set => 'BIOS.'.$name, $value );
@@ -177,7 +185,7 @@ sub set {
 
 sub pending_from {
   my ( $class, $raw ) = @_;
-  return WWW::iDRAC::Racadm->text_from($raw) =~ /\bpending\b/i ? 1 : 0;
+  return $class->racadm_class->text_from($raw) =~ /\bpending\b/i ? 1 : 0;
 }
 
 =method set
@@ -186,22 +194,27 @@ sub pending_from {
 
 Stages a new value and returns C<name>, C<value>, C<previous> (the value
 before), C<fqdd> (the BIOS component the job in L</commit> is made for) and
-C<pending>, true when racadm said the change is pending. Nothing changes in
-the running BIOS until L</commit> and a restart.
+C<pending>, true when the answer of racadm contains the word I<pending>.
+Nothing changes in the running BIOS until L</commit> and a restart.
 
 The attribute is read first: one that does not exist is
 L<WWW::iDRAC::Error::API> with C<is_not_found>, one the BIOS shows read-only
 is L<WWW::iDRAC::Error::Validation>, in both cases before anything is
-written. A value with a character racadm cannot be given safely, see
-L<WWW::iDRAC::Racadm/quote>, is C<Validation> too. The BIOS decides whether
-the value itself is allowed; its refusal is L<WWW::iDRAC::Error::API>.
+written. The value goes through L<WWW::iDRAC::Racadm/quote_value>: one with
+a character racadm cannot be given safely, or one that starts with C<->
+(a value such as C<-1> is refused for that reason), is C<Validation> too,
+before anything is read. The BIOS decides whether the value itself is allowed;
+its refusal is L<WWW::iDRAC::Error::API>.
+
+Not run against hardware; tested against a fake only. What racadm prints
+after a C<set> was never seen, so C<pending> rests on a guess about its text.
 
 =method pending_from
 
     my $pending = WWW::iDRAC::Bios->pending_from($text);
 
-1 when the text racadm printed after a C<set> says the change is pending.
-No I/O.
+1 when the text racadm printed after a C<set> contains the word I<pending>,
+else 0. The text of a real answer was not seen. No I/O.
 
 =cut
 
@@ -213,20 +226,27 @@ sub commit {
   WWW::iDRAC::Error::Validation->throw( message => 'commit takes reboot only' ) if %arg;
   WWW::iDRAC::Error::Validation->throw( message => 'reboot is none, graceful, forced or pwrcycle' )
     unless !ref $reboot && $REBOOT{$reboot};
-  my $fqdd = $self->fqdd;
+  my $fqdd = $self->_fqdd;
   my $answer = $self->racadm_run( commit => jobqueue => create => $fqdd, '-r', $reboot, '-s', 'TIME_NOW' );
-  return $self->job_from( $answer, $fqdd );
+  my $job = $self->job_from( $answer, $fqdd );
+  # racadm said no error, but a job it does not name cannot be followed
+  $self->racadm->api_error_class->throw(
+    message     => 'racadm jobqueue create printed no job id (JID_...) for '.$fqdd,
+    http_status => undef,
+    api_message => $self->racadm_class->text_from($answer)
+  ) unless defined $job->{job_id};
+  return $job;
 }
 
 sub job_from {
   my ( $class, $raw, $fqdd ) = @_;
-  my $text = WWW::iDRAC::Racadm->text_from($raw);
+  my $text = $class->racadm_class->text_from($raw);
   my ($commit) = $text =~ /\b(JID_[0-9]+)\b/;
   my ($reboot) = $text =~ /\b(RID_[0-9]+)\b/;
   return { job_id => $commit, reboot_job_id => $reboot, fqdd => $fqdd };
 }
 
-sub fqdd {
+sub _fqdd {
   my ( $self ) = @_;
   my $read = $self->group_from( $self->racadm_run( commit => get => 'BIOS.BiosBootSettings' ) );
   return $read->{fqdd} // $self->unsupported( commit => 'the controller names no BIOS component' );
@@ -242,7 +262,16 @@ Creates the job that applies the staged BIOS changes and returns C<job_id>
 one, else C<undef>) and C<fqdd>. C<reboot> is C<none>, the default: the job
 waits for the next restart, which is what the caller decides; C<graceful>,
 C<forced> or C<pwrcycle> restarts the server, with the effect those words
-have for racadm. Follow the job with L<WWW::iDRAC::Jobs/wait>.
+have for racadm. Follow the job with L<WWW::iDRAC::Jobs/wait>. The job is
+created for the component named by C<get BIOS.BiosBootSettings>, with
+C<jobqueue create ... -r REBOOT -s TIME_NOW>. An answer in which no C<JID_...>
+can be found is not returned as C<undef> but thrown as
+L<WWW::iDRAC::Error::API> (C<message_id> is C<undef>, C<api_message> holds the
+text racadm printed), because a job that cannot be named cannot be followed.
+
+Not run against hardware; tested against a fake only. The form of the answer
+of C<jobqueue create> was never seen: that the job id is the first
+C<JID_> and the restart job the first C<RID_> in it is a guess.
 
 =method job_from
 
@@ -250,11 +279,6 @@ have for racadm. Follow the job with L<WWW::iDRAC::Jobs/wait>.
 
 The job identifiers out of the text racadm printed when it created the job,
 without I/O.
-
-=method fqdd
-
-The name of the BIOS component as the controller gives it, for example
-C<BIOS.Setup.1-1>, read from the boot settings.
 
 =cut
 

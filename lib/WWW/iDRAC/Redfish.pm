@@ -101,9 +101,9 @@ C<redfish>, see L<WWW::iDRAC::Role::Transport>.
 # the transports that may hold a session, held weakly, for the END block below
 my %LIVE;
 
-# the process that loaded this module; a forked child's $$ differs, and the
-# child does not end the parent's session
-our $PID = $$;
+# the process that made the object; a child forked from it has another $$
+# and does not end the parent's session
+has _pid => ( is => 'ro', init_arg => undef, default => sub { $$ } );
 
 sub BUILD {
   my ( $self ) = @_;
@@ -209,7 +209,7 @@ dropped the session itself.
 
 sub logout {
   my ( $self ) = @_;
-  return 0 unless $$ == $PID;
+  return 0 unless $$ == $self->_pid;
   my $token = $self->_token;
   my $path  = $self->_session_path;
   $self->forget_session;
@@ -233,7 +233,9 @@ Ends the session, if there is one, and returns true when there was one. A
 session the controller has dropped by itself counts as ended. An iDRAC allows
 only a few sessions at a time and frees an abandoned one only after a
 timeout, so call this when you are done. The object also does it when it is
-destroyed, and every object still alive does it when the program ends.
+destroyed, and every object still alive does it when the program ends. Only
+the process that made the object does it: a child forked from it leaves the
+session of the parent alone.
 
 =cut
 
@@ -251,7 +253,6 @@ sub DEMOLISH {
 # does not end the parent's session.
 END {
   local ( $@, $!, $? );
-  return unless $$ == $PID;
   eval { $_->logout } for grep { defined } values %LIVE;
 }
 

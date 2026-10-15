@@ -1,6 +1,6 @@
 package WWW::iDRAC::Error::API;
 
-# ABSTRACT: Raised when the iDRAC answers with an HTTP error
+# ABSTRACT: Raised when the iDRAC answers with an HTTP error or racadm prints ERROR:
 
 use Moo;
 extends 'WWW::iDRAC::Error';

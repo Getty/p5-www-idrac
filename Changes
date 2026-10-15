@@ -28,6 +28,24 @@ Revision history for WWW-iDRAC
       supports) for the two transports; the Redfish classes are unchanged
     - Error::API: http_status is undef for racadm errors, is_not_found knows
       RAC992, RAC1019 and RAC1020; Error::Network has a cause for SSH failures
+    - Error::Network cause tells refused (only that one becomes Unsupported)
+      from unreachable, host_key, auth, timeout and other, worked out from
+      what the SSH client printed; Net::OpenSSH's generic "bad password or
+      master process exited" is no longer taken for a refused login
+    - racadm errors are found anywhere in the answer, not only on the first
+      line; a non-zero remote exit keeps the connection and is parsed as one
+    - Values for bios->set and remote image location, user and password
+      that start with "-" are refused as Error::Validation
+    - capabilities->license is undef only with ssh off, a refused port or a
+      racadm API error; host key, login and other failures are thrown and
+      not cached
+    - bios->commit throws Error::API when racadm names no job ID; fqdd is
+      private
+    - A session or SSH connection is ended only by the process that opened
+      it, tracked per object, not per program
+    - POD, README and spec mark every racadm write path as not run against
+      hardware, and say that a share password is visible in the local ssh
+      argument list
     - t/92-live-racadm.t, reading only unless IDRAC_LIVE_DESTRUCTIVE=1;
       racadm recordings of both generations in t/fixtures
     - Constructor arguments are validated as WWW::iDRAC::Error::Validation

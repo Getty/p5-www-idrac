@@ -135,19 +135,24 @@ Redfish-Seite nicht kennt; alles Weitere ist optional:
 | Attribut | Bedeutung |
 |---|---|
 | `ssh` | Standard `1`. `0`: racadm wird nicht benutzt, Phase-2-Methoden sind `Unsupported`. |
-| `ssh_username`, `ssh_password` | Standard: `username`, `password`. Nur zusammen. |
+| `ssh_username`, `ssh_password` | Standard: `username`, `password`. Nur beide oder keins (sonst `Validation`). |
 | `ssh_port` | Standard 22. Der Port in `host` ist der HTTPS-Port. |
 | `ssh_host_key` | Host-Key anpinnen (`ssh-ed25519 AAAA…`). |
-| `ssh_known_hosts` | Eine `known_hosts`-Datei. Ohne beides: die des Benutzers. |
+| `ssh_known_hosts` | Eine `known_hosts`-Datei; nur sie zählt, die globale wird ignoriert (`GlobalKnownHostsFile=/dev/null`). Nicht zusammen mit `ssh_host_key`. Ohne beides: die Standarddateien des SSH-Clients. |
 | `ssh_verify_host_key` | Standard `1`. `0` nimmt jeden Key; nicht zusammen mit den zwei davor. |
 | `ssh_opts` | Weitere `-o Name=Wert` für den SSH-Client, für alte Algorithmen. |
+
+`timeout` gilt auch für SSH (Verbindung und jedes Kommando).
 | `racadm` | Ein eigener Transport statt des gebauten. |
 
 Dieselben Zugangsdaten sind der Standard, weil ein iDRAC Web- und SSH-Login aus
 derselben Benutzerverwaltung bedient; wer sie trennt, nutzt `ssh_username`/`ssh_password`.
 Der Host-Key wird geprüft (Haus-Muster wie bei Rex::LibSSH: Strict an, anpinnen oder
-seeden, überschreibbar, nie von selbst aus). `ssh_opts` können die Prüfung nicht
-abschwächen. Die Dist setzt keine alten Algorithmen von selbst.
+seeden, überschreibbar, nie von selbst aus). `ssh_opts` überschreiben nur nicht, was
+`Racadm::SSH::options_from` festlegt (Host-Key-Prüfung, Login-Verfahren, ein
+Passwortversuch); ein Eintrag, der nicht `Name=Wert` ohne Leerzeichen und Shell-Zeichen
+ist, wirft `Validation`, und zwar erst beim Verbinden, nicht im Konstruktor. Die Dist
+setzt keine alten Algorithmen von selbst.
 
 ## 4. Redfish-Transport (`WWW::iDRAC::Redfish`)
 
@@ -187,8 +192,12 @@ Rückgaben sind Hashrefs oder Arrayrefs von Hashrefs mit festen Schlüsseln in
 Die Lizenz kommt seit Phase 2 aus `racadm license view` (Zeilen `License Description`,
 bei mehreren die höchste) und wird erst bei `license` oder `facts` gelesen, nie bei
 `generation`, `model`, `firmware`, `redfish_version`: Wer nur Redfish nutzt, öffnet
-keine SSH-Verbindung. Nicht lesbar heißt: racadm aus, SSH nicht erreichbar oder Login
-verweigert, keine Lizenz gelistet.
+keine SSH-Verbindung; `supports('bios.*')`, `'jobs.*'` und `'virtual_media.*'` öffnen
+sie ebenfalls, weil sie den Controller über racadm fragen. `undef` heißt nur: racadm aus
+(`ssh => 0`), der SSH-Port verweigert die Verbindung (`cause` `refused`), racadm
+antwortet mit einem Fehler (`Error::API`) oder keine Lizenz ist gelistet. Alles andere
+wird geworfen und nicht gemerkt: `Validation` und jedes andere `Error::Network` (Host-Key,
+Login, Zeitablauf, nicht erreichbar, sonstiges). Also kann `capabilities->license` werfen.
 
 `supports($name)` beantwortet, ob eine Fähigkeit auf diesem Controller vorhanden ist. Die
 Namen sind die der Methoden (`power.cycle`, `logs.clear_sel`). Die Antwort kommt aus dem,
@@ -255,12 +264,16 @@ Attribute heißen `Gruppe.Attribut` wie bei racadm (`BiosBootSettings.BootMode`)
 |---|---|
 | `groups` | Arrayref der Gruppennamen. Nur wo der Controller sie listet (iDRAC 8); iDRAC 7 antwortet `Unsupported`. |
 | `group($gruppe)` | je Attribut: `name`, `value` (`undef` wenn leer), `read_only` |
-| `get('Gruppe.Attribut')` | der Wert; die gestagete Änderung zählt nicht |
-| `set('Gruppe.Attribut' => $wert)` | stagt; `name`, `value`, `previous`, `fqdd`, `pending`. Liest vorher: schreibgeschützt ist `Validation`, unbekannt `API` mit `is_not_found`, beides vor dem Schreiben. |
-| `commit( reboot => 'none' )` | legt den Job an (`jobqueue create <fqdd> -r <reboot>`); `job_id`, `reboot_job_id`, `fqdd`. `reboot`: `none` (Standard), `graceful`, `forced`, `pwrcycle`. |
+| `get('Gruppe.Attribut')` | der Wert; die gestagete Änderung zählt nicht (ungemessen, s. u.) |
+| `set('Gruppe.Attribut' => $wert)` | stagt; `name`, `value`, `previous`, `fqdd`, `pending`. Liest vorher: schreibgeschützt ist `Validation`, unbekannt `API` mit `is_not_found`, beides vor dem Schreiben. Der Wert geht durch `Racadm->quote_value`: auch ein Wert, der mit `-` beginnt (etwa `-1`), ist `Validation`. |
+| `commit( reboot => 'none' )` | legt den Job an (`jobqueue create <fqdd> -r <reboot> -s TIME_NOW`); `job_id`, `reboot_job_id`, `fqdd`. `reboot`: `none` (Standard), `graceful`, `forced`, `pwrcycle`. Steht in der Antwort keine `JID_…`, wirft `commit` `Error::API` (kein `undef`). |
 
 Eine Änderung wirkt erst mit Job und Neustart des Servers. Die Dist startet den Server nie
-von sich aus neu.
+von sich aus neu. `set` und `commit` sind gegen kein Gerät gelaufen. Ungemessen und hier
+nur angenommen: dass `get` eine gestagete Änderung nicht zeigt, woran `set` ein `pending`
+erkennt (das Wort `pending` in der Antwort) und wo in der Antwort von `jobqueue create` die
+Job-Id steht (die erste `JID_…`, die erste `RID_…`). Auch `-s TIME_NOW` ist ungemessen:
+die Aufnahmen enthalten kein `racadm help`, die Quelle der Option ist ungeklärt.
 
 ### 5.8 `jobs` (Phase 2, racadm)
 
@@ -271,9 +284,11 @@ von sich aus neu.
 | `delete($id)` | entfernt den Job; ein laufender wird vom Controller verweigert |
 | `wait( $id, timeout => 600, interval => 5 )` | fragt `get` ab, bis `finished`; gibt den Job zurück, bei Ablauf der Zeit `undef` |
 
-`id` ist `JID_…` oder `RID_…`, unverändert vom Controller. `finished` heißt: Status
-`Completed`, `Completed with Errors`, `Failed`, `Reboot Failed` oder abgebrochen; ob der
-Job gelang, steht in `status` und `message`.
+`id` ist `JID_…` oder `RID_…`, unverändert vom Controller. `finished` heißt: der Status
+enthält das Wort `completed`, `failed` oder `canceled`/`cancelled` (etwa `Completed with
+Errors`, `Reboot Failed`); ob der Job gelang, steht in `status` und `message`. Gemessen
+ist nur `Completed` (iDRAC 7); die übrigen Status sind ungemessen. `delete` ist gegen kein
+Gerät gelaufen.
 
 ### 5.9 `virtual_media` (Phase 2, racadm)
 
@@ -283,7 +298,20 @@ Job gelang, steht in `status` und `message`.
 | `connect( location => …, username => …, password => … )` | hängt ein Image ein (`//host/share/a.iso`, `host:/export/a.iso`, `http(s)://…`), gibt den Status zurück; CIFS braucht Benutzer und Passwort |
 | `disconnect` | hängt aus, gibt den Status zurück |
 
-Das Passwort wird nie zurückgegeben und steht in keiner Meldung.
+Das Passwort wird nie zurückgegeben und steht in keiner Meldung. `location`, `username`
+und `password` gehen durch `Racadm->quote_value`; eine URL mit `?` oder `&` passt auf keine
+der erlaubten Formen und wird abgelehnt. `connected` ist wahr, wenn `remoteimage -s`
+`Remote File Share is Enabled` druckt; gemessen ist nur `Disabled`, die Form mit
+eingehängtem Image nicht. `connect` und `disconnect` sind gegen kein Gerät gelaufen.
+
+**Das Passwort der Freigabe steht im Kommandostring** (`remoteimage -c -u … -p … -l …`),
+den der SSH-Client als ein Argument an den Controller schickt: Es erscheint in den
+Argumenten des lokalen `ssh`-Prozesses (sichtbar über `ps` oder `/proc` für andere
+Benutzer dieser Maschine) und auf dem Controller. Anders als das Login-Passwort, das über
+das Terminal geht und nie auf einer Kommandozeile steht. Dass der Controller die Lizenz
+*Virtual Media* auch für `remoteimage -c`/`-d` verlangt, ist aus der Ablehnung von
+`get iDRAC.VirtualMedia` (`SWC0242`, `Required License -- Virtual Media`) geschlossen,
+nicht gesehen.
 
 ### 5.10 Argumente an racadm
 
@@ -293,7 +321,10 @@ bekannt. Deshalb besteht jedes Argument aus Buchstaben, Ziffern, Leerzeichen und
 `_ . : / @ = , + % # -`, sonst `Validation` (ohne den Wert in der Meldung); Wörter mit
 Leerzeichen oder `#` kommen in doppelte Anführungszeichen. Folge: ein Passwort mit `"`,
 `\`, `$` und ähnlichem kann nicht gesendet werden. Das ist die ehrliche Grenze, kein
-Escaping auf Verdacht.
+Escaping auf Verdacht. `Racadm->quote_value` gilt für Wörter an der Stelle eines Werts
+(BIOS-Wert, Freigabe, Benutzer, Passwort) und lehnt zusätzlich ein Wort ab, das mit `-`
+beginnt, weil racadm es als Option läse, auch in Anführungszeichen; ein BIOS-Wert wie `-1`
+kann darum nicht gesetzt werden.
 
 ### Nicht in Phase 1 und 2
 
@@ -308,7 +339,7 @@ geworfen, wie in `WWW::Keycloak`.
 | Klasse | Wann | Zusätzlich |
 |---|---|---|
 | `Error::Validation` | falsche Argumente | |
-| `Error::Network` | keine HTTP-Antwort, TLS-Fehler; über SSH: Verbindung, Host-Key, Login, Zeitablauf | `cause` (nur SSH: `refused`, `host_key`, `auth`, `timeout`, `other`) |
+| `Error::Network` | keine HTTP-Antwort, TLS-Fehler; über SSH: Verbindung, Host-Key, Login, Zeitablauf | `cause` (nur SSH: `host_key`, `auth`, `refused`, `unreachable`, `timeout`, `other`; aus dem stderr des ssh-Masters bestimmt; nur `refused` wird in den racadm-Klassen zu `Unsupported`) |
 | `Error::API` | iDRAC antwortet mit Fehler; racadm druckt `ERROR:` | `http_status` (bei racadm `undef`), `message_id` (`RAC1019`, `SWC0242` …), `api_message`, `resolution`; `is_not_found`, `is_unauthorized` |
 | `Error::Unsupported` | Fähigkeit fehlt auf diesem Controller | `capability`, `reason` |
 
@@ -482,14 +513,14 @@ Passwort-Abfrage des `keyboard-interactive` über sein Terminal. Der Exit-Status
 | SSH Port 22, `racadm getversion` | ja | ja |
 | `racadm license view` | Baum mit Tabs; `License Description = iDRAC7 Enterprise License` | `... iDRAC8 Express License` |
 | `racadm get BIOS` (Gruppenliste) | `ERROR: Unable to perform requested operation.` | 13 Gruppennamen, einer je Zeile |
-| `racadm get BIOS.<Gruppe>` | ja, `[Key=BIOS.Setup.1-1#<Gruppe>]`, `#Name=Wert` schreibgeschützt | ebenso |
+| `racadm get BIOS.<Gruppe>` | ja, `[Key=BIOS.Setup.1-1#<Gruppe>]`; die Aufnahmen enthalten keinen `#Name=Wert`-Eintrag, dass `#` schreibgeschützt heißt, ist ungemessen | ebenso |
 | `racadm get BIOS.<Gruppe>.<Attr>` | ja, ein Eintrag | ebenso |
 | Unbekannte Gruppe / Attribut | `ERROR: RAC1020` / `ERROR: RAC1019` | ebenso |
 | `racadm jobqueue view` | Kopfzeile, dann `[Job ID=JID_…]`-Blöcke mit `Key=Value`; ein abgeschlossener Job | nur die Kopfzeile (leere Queue) |
 | `racadm jobqueue view -i <id>` | ein Block unter `---- JOB ----` | unbekannte Id: `RAC992: Invalid job` ohne `ERROR:` |
 | `racadm remoteimage -s` | `Remote File Share is Disabled` + `UserName`/`Password`/`ShareName` | ebenso |
 | `racadm get iDRAC.VirtualMedia` | `Attached`, `BootOnce`, `Enable`, ... | `ERROR: SWC0242 : A required license is missing or expired.` + `Required License -- Virtual Media` |
-| `racadm help remoteimage` / `jobqueue` / `set` | Verwendung und Optionen (`-c -u -p -l`, `-d`, `-s`; `jobqueue create <fqdd> -r none\|pwrcycle\|graceful\|forced`, `delete -i`) | ebenso |
+| `racadm help remoteimage` / `jobqueue` / `set` | Verwendung und Optionen (`-c -u -p -l`, `-d`, `-s`; `jobqueue create <fqdd> -r none\|pwrcycle\|graceful\|forced`, `delete -i`). Der Code sendet außerdem `-s TIME_NOW` an `jobqueue create` (in `commit`); das steht in dieser Zusammenfassung nicht und ist ungemessen. | ebenso |
 
 **Entscheidung: racadm über SSH.**
 
@@ -505,18 +536,24 @@ Passwort-Abfrage des `keyboard-interactive` über sein Terminal. Der Exit-Status
 - **Kosten:** Die Antworten sind langsam (Sekunden je Kommando; ein Lauf der lesenden
   Live-Suite 60 bis 100 s), SSH ist ein zweiter Dienst, der am iDRAC angeschaltet sein
   muss und nur wenige Sessions zulässt, und Fehler sind Text, nicht Status. Das
-  Letzte fängt `Racadm::error_from`, das Zweite beendet die Verbindung in `DEMOLISH`.
+  Letzte fängt `Racadm::error_from` (es sucht `ERROR:` oder eine fehlgeschlagene Zeile mit
+Code in der ganzen Antwort, nicht nur in der ersten Zeile), das Zweite beendet die
+Verbindung in `DEMOLISH`, in dem Prozess, der sie geöffnet hat; ein Kindprozess nach
+`fork` lässt die Verbindung des Elternprozesses in Ruhe. Ein Kommando, das mit Status
+ungleich 0 endet, trennt die Verbindung nicht; seine Ausgabe geht durch `error_from`.
 
 **SSH-Bibliothek: Net::OpenSSH.** Installiert, reines Perl, und es steuert das `ssh` der
 Maschine: Algorithmen, Host-Key-Prüfung (`known_hosts`, `StrictHostKeyChecking`) und
 `ssh_config` sind die des gepflegten OpenSSH, nicht eine Nachbildung. Es beantwortet die
-Passwort-Abfrage über ein Terminal (`IO::Pty`), also nie auf einer Kommandozeile.
+Passwort-Abfrage über ein Terminal (`IO::Pty`), also nie auf einer Kommandozeile. Das
+gilt für das Login-Passwort; das Passwort einer Freigabe (`virtual_media->connect`) steht
+im Kommandostring (Abschnitt 5.9).
 `Net::SSH2` (libssh2) ist hier nicht installiert und braucht eine C-Bibliothek,
 `Rex::LibSSH` ist auf Rex zugeschnitten. Nachteil: ein `ssh`-Programm ist Laufzeit-Voraussetzung.
 
 **Host-Key.** Strict an. `ssh_host_key` pinnt einen Key (die Dist schreibt eine temporäre
-`known_hosts` nur mit ihm), `ssh_known_hosts` nennt eine Datei, sonst gilt die des
-Benutzers; `ssh_verify_host_key => 0` ist die ausdrückliche Entscheidung des Aufrufers
+`known_hosts` nur mit ihm), `ssh_known_hosts` nennt eine Datei, die allein gilt (die globale `known_hosts` wird
+ignoriert), sonst gelten die Standarddateien des SSH-Clients; `ssh_verify_host_key => 0` ist die ausdrückliche Entscheidung des Aufrufers
 und nicht zusammen mit den beiden anderen erlaubt. Ein Login-Versuch je Verbindung
 (`NumberOfPasswordPrompts=1`), damit ein falsches Passwort den Controller nicht mehrfach
 anläuft.
@@ -525,8 +562,19 @@ anläuft.
 den Antwortformen abgeleitet): `racadm set BIOS...`, `jobqueue create`, `jobqueue delete`,
 `remoteimage -c`/`-d`, die Form von `remoteimage -s` mit eingehängtem Image, die Antwort
 auf `set` und `jobqueue create` (die Dist sucht darin `pending`, `JID_…`, `RID_…`), Jobs
-im Zustand `Running`/`Scheduled`, mehrere Lizenzen, und alles Schreibende auf dem
-iDRAC 8. `racadm get BIOS` auf dem iDRAC 7 (kein Gruppenverzeichnis) ist gemessen und
+im Zustand `Running`/`Scheduled` und überhaupt alle Job-Status außer `Completed`
+(`Completed with Errors`, `Failed`, `Reboot Failed`, abgebrochen sind angenommen), mehrere
+Lizenzen, und alles Schreibende auf dem iDRAC 8. Ebenfalls nicht gesehen: dass `get` ein
+gestagetes BIOS-Attribut nicht zeigt, woran `set` ein `pending` erkennt, wo `commit` die
+Job-Id findet (ohne `JID_…` wirft `commit` `Error::API`), die Form von `remoteimage -s` mit
+Image (`connected` ist wahr bei `Remote File Share is Enabled`), das `#`-Zeichen für
+schreibgeschützte Attribute (die Aufnahmen haben keins), und dass `remoteimage -c`/`-d`
+die Lizenz *Virtual Media* brauchen: Das ist aus der Ablehnung von `get
+iDRAC.VirtualMedia` (`SWC0242`) geschlossen, nicht gesehen. Die Texte, mit denen der
+SSH-Client Fehler meldet, wurden nur gegen einen geschlossenen lokalen Port und einen
+nicht auflösbaren Namen geprüft (`cause` `refused`, `unreachable`), nicht gegen einen
+iDRAC; `host_key`, `auth`, `timeout` und die übrigen Muster sind nicht an einem
+Controller gesehen. `racadm get BIOS` auf dem iDRAC 7 (kein Gruppenverzeichnis) ist gemessen und
 `bios.groups` dort `Unsupported`. Wie der racadm-Parser der Controller Anführungszeichen
 und Backslashes behandelt, ist nicht gemessen; deshalb lässt die Dist solche Zeichen in
 Argumenten nicht zu (Abschnitt 5.10).

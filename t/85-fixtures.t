@@ -131,6 +131,7 @@ for my $name ( sort keys %controller ) {
         push @{ $found{unsupported} }, $method if defined $offered && !$offered;
       }
       is_deeply( [ grep { !/\Aracadm (?:get|license view|jobqueue view|remoteimage -s)/ } @{ $racadm->commands } ], [], 'only reading commands were sent' );
+      ok( $racadm->connected, 'the racadm connection is open while the client lives' );
     }
     # the switching methods are only asked about, never called
     for my $method (qw( power.on power.off power.restart power.cycle logs.clear_sel manager.restart )) {
@@ -138,6 +139,8 @@ for my $name ( sort keys %controller ) {
       ok( defined $offered, $method.': supports answers' ) or diag $@;
       push @{ $found{unsupported} }, $method if defined $offered && !$offered;
     }
+    undef $idrac;
+    if ($racadm) { ok( !$racadm->connected, 'the racadm connection is closed when the client is gone' ) }
     @{ $found{unsupported} } = sort @{ $found{unsupported} };
     is( scalar $fake->seen(qr/\A(?:POST(?! \S*Sessions\z)|PATCH|PUT)/), 0, 'reading changes nothing on the controller' );
     is_deeply( \@warnings, [], 'no warnings' );

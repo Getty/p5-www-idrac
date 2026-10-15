@@ -4,7 +4,6 @@ package WWW::iDRAC::Jobs;
 
 use Moo;
 use WWW::iDRAC::Error::Validation;
-use WWW::iDRAC::Racadm;
 use WWW::iDRAC::Util qw( number text );
 use namespace::autoclean;
 
@@ -38,6 +37,10 @@ C<Now> and C<Not Applicable> included) and C<finished>, true once the
 status says completed, failed or cancelled. The
 identifiers of the controller are not rewritten.
 
+Of the statuses, only C<Completed> was seen, on an iDRAC 7. The others named
+here, and the way C<finished> recognises them (the words I<completed>,
+I<failed> and I<canceled> or I<cancelled> in the status), were not seen.
+
 =cut
 
 my $JOB_ID = qr/\A(?:JID|RID)_[0-9]+\z/;
@@ -52,7 +55,7 @@ sub _job_id {
 sub jobs_from {
   my ( $class, $raw ) = @_;
   my @jobs;
-  for my $block ( WWW::iDRAC::Racadm->blocks_from($raw) ) {
+  for my $block ( $class->racadm_class->blocks_from($raw) ) {
     next unless $block->{kind} eq 'Job ID';
     my %value = map { $_->{name} => $_->{value} } @{ $block->{entries} };
     my ( $message_id, $message ) = ( text( $value{Message} ) // '' ) =~ /\A([A-Z]{2,5}[0-9]{1,5})\s*:\s*(.*)\z/s;
@@ -124,6 +127,8 @@ sub delete {
 
 Removes one job from the queue and returns true. The controller refuses a job
 that is running; that refusal is L<WWW::iDRAC::Error::API>.
+
+Not run against hardware; tested against a fake only.
 
 =cut
 

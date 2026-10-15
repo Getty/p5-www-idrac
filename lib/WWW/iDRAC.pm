@@ -49,6 +49,9 @@ our $VERSION = '0.001';
     # what Redfish lacks on an iDRAC 7 or 8 comes over SSH, with racadm
     print $idrac->bios->get('BiosBootSettings.BootMode'), "\n";
     print $_->{id}, ' ', $_->{status}, "\n" for @{ $idrac->jobs->list };
+
+    # undef where racadm is off or the SSH port is closed; a refused login
+    # or host key throws WWW::iDRAC::Error::Network
     print $idrac->capabilities->license // '?', "\n";
 
     # what the facade does not cover yet
@@ -76,9 +79,12 @@ L<WWW::iDRAC::Error::Unsupported> before anything is sent.
 =head2 SSH and racadm
 
 BIOS, jobs and virtual media are served over racadm through SSH, which is
-reached with the same C<username> and C<password> unless the C<ssh_*>
-attributes say otherwise. They are only used when one of those methods is
-called, and the Redfish classes never touch SSH. The SSH side needs the
+reached with the same C<username> and C<password> unless C<ssh_username>
+and C<ssh_password> say otherwise. SSH is only used when one of those methods
+is called, when C<< capabilities->supports >> is asked about one of them, or
+when the license is read; the Redfish classes never touch it.
+C<< ssh => 0 >> switches it off: those methods are then
+L<WWW::iDRAC::Error::Unsupported> and no connection is made. The SSH side needs the
 C<ssh> program of OpenSSH and L<Net::OpenSSH> on this machine, with
 L<IO::Pty> for the password prompt, and the SSH service switched on at the
 iDRAC.
@@ -88,6 +94,11 @@ a file, and without either the C<known_hosts> of the user is used. A key it
 does not know ends the connection.  C<< ssh_verify_host_key => 0 >> turns the
 check off and is your decision to make, not a default. See
 L<WWW::iDRAC::Racadm>.
+
+B<Nothing that writes over racadm has run against hardware.>
+C<< bios->set >> and C<commit>, C<< jobs->delete >> and
+C<< virtual_media->connect >> and C<disconnect> are tested against a fake only;
+what reads has run against an iDRAC 7 and an iDRAC 8.
 
 =head2 Certificates
 
@@ -187,7 +198,8 @@ has timeout => (
 
 =attr timeout
 
-Seconds to wait for an answer, 60 by default. An iDRAC is slow.
+Seconds to wait for an answer, 60 by default. An iDRAC is slow. It is also
+the time the SSH connection and each racadm command are given.
 
 =cut
 
@@ -213,7 +225,8 @@ has ssh_password => ( is => 'ro', isa => Maybe [Str] );
 =attr ssh_password
 
 For the SSH login, when it is not the one of L</username> and L</password>.
-Each one defaults to its counterpart.
+Give both or neither: one without the other is
+L<WWW::iDRAC::Error::Validation>.
 
 =cut
 
@@ -233,12 +246,16 @@ has ssh_opts            => ( is => 'ro', isa => ArrayRef [Str], default => sub {
 
 =attr ssh_known_hosts
 
-A C<known_hosts> file to check the SSH host key against.
+A C<known_hosts> file to check the SSH host key against. It is the only file
+looked at: the global C<known_hosts> of the machine is ignored. Without this
+and without L</ssh_host_key> the default files of the SSH client are used.
+Not allowed together with L</ssh_host_key>.
 
 =attr ssh_host_key
 
 The host key to expect: the type and the base64 key, like C<ssh-ed25519
-AAAA...>, as C<ssh-keyscan -t ed25519 HOST> prints it without the name.
+AAAA...>, as C<ssh-keyscan -t ed25519 HOST> prints it without the name. Not
+allowed together with L</ssh_known_hosts>.
 
 =attr ssh_verify_host_key
 
@@ -248,8 +265,11 @@ L</ssh_known_hosts> or L</ssh_host_key>.
 =attr ssh_opts
 
 Further C<Name=value> options for the SSH client, for a controller that
-needs an algorithm a current OpenSSH has switched off. They cannot weaken
-the checks above.
+needs an algorithm a current OpenSSH has switched off. They cannot override
+the options the dist fixes (host key checking, the login methods, one
+password attempt, see L<WWW::iDRAC::Racadm::SSH/options_from>). An entry that
+is not C<Name=value> without spaces is L<WWW::iDRAC::Error::Validation>, thrown
+when the connection is made.
 
 =cut
 

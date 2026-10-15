@@ -33,6 +33,14 @@ subtest 'groups' => sub {
   is( $e->capability, 'bios.groups', 'by name' );
   like( $e->reason, qr/does not list/, 'and why' );
   is_deeply( $old->bios->group('BiosBootSettings')->[0], { name => 'BootMode', value => 'Bios', read_only => 0 }, 'but serves a group by name' );
+
+  # only the answer of an iDRAC 7 is a fact about the controller; another error is one
+  my $racadm = FakeRacadm->new( replies => { 'racadm get BIOS' => "ERROR: RAC1021: The BIOS is busy.\n" } );
+  my $busy   = WWW::iDRAC->new( host => 'idrac.test', username => 'root', password => 'calvin', ua => FakeiDRAC->new, racadm => $racadm->transport );
+  $e = error_of { $busy->bios->groups };
+  isa_ok( $e, 'WWW::iDRAC::Error::API', 'another error of racadm' );
+  ok( !$e->isa('WWW::iDRAC::Error::Unsupported'), 'is no Unsupported' );
+  is( $e->message_id, 'RAC1021', 'and keeps its code' );
 };
 
 subtest 'group and get' => sub {
@@ -107,6 +115,36 @@ subtest 'set with a value that needs quotes' => sub {
   is( $fake->commands->[-1], 'racadm set BIOS.BiosBootSettings.HddSeq ""', 'empty is two quotes' );
 };
 
+subtest 'set refuses a value racadm would read as an option' => sub {
+  my ( $idrac, $fake ) = setup();
+  for my $value ( '-d', '-f' ) {
+    isa_ok( error_of { $idrac->bios->set( 'BiosBootSettings.HddSeq' => $value ) }, 'WWW::iDRAC::Error::Validation', $value );
+  }
+  is_deeply( $fake->commands, [], 'before anything is sent' );
+};
+
+subtest 'a bad value sends nothing at all' => sub {
+  my ( $idrac, $fake ) = setup();
+  for my $value ( 'a"b', 'a;b', "a\nb", '$(x)', '-d', undef, [], 'x' x 513 ) {
+    isa_ok( error_of { $idrac->bios->set( 'BiosBootSettings.HddSeq' => $value ) }, 'WWW::iDRAC::Error::Validation', 'value '.( ref $value || $value // 'undef' ) );
+  }
+  is_deeply( $fake->commands, [], 'no racadm get either, the value is judged first' );
+  is_deeply( $fake->staged, {}, 'and nothing staged' );
+};
+
+subtest 'commit needs a job id in the answer' => sub {
+  my $racadm = FakeRacadm->new( replies => {
+    'racadm get BIOS.BiosBootSettings'                          => "[Key=BIOS.Setup.1-1#BiosBootSettings]\nBootMode=Bios\n",
+    'racadm jobqueue create BIOS.Setup.1-1 -r none -s TIME_NOW' => "RAC1024: Successfully scheduled a job.\n"
+  } );
+  my $idrac = WWW::iDRAC->new( host => 'idrac.test', username => 'root', password => 'calvin', ua => FakeiDRAC->new, racadm => $racadm->transport );
+  my $e = error_of { $idrac->bios->commit };
+  isa_ok( $e, 'WWW::iDRAC::Error::API', 'an answer without JID_' );
+  like( "$e", qr/no job/i, 'says so' );
+  ok( !WWW::iDRAC::Bios->can('fqdd'), 'the component name is read inside, no method of the area' );
+  isa_ok( error_of { $idrac->bios->supports('fqdd') }, 'WWW::iDRAC::Error::Validation', 'and no capability' );
+};
+
 subtest 'job_from' => sub {
   is_deeply( WWW::iDRAC::Bios->job_from( "RAC1024: Successfully scheduled a job.\nCommit JID = JID_123456789012\nReboot JID = RID_123456789013\n", 'BIOS.Setup.1-1' ),
     { job_id => 'JID_123456789012', reboot_job_id => 'RID_123456789013', fqdd => 'BIOS.Setup.1-1' }, 'both' );
@@ -143,6 +181,20 @@ subtest 'racadm switched off or not there' => sub {
   my $bad = WWW::iDRAC->new( host => 'idrac.test', username => 'root', password => 'calvin', ua => FakeiDRAC->new, racadm => $auth->transport );
   isa_ok( error_of { $bad->bios->groups }, 'WWW::iDRAC::Error::Network', 'a refused login stays a network error' );
   isa_ok( error_of { $bad->bios->supports('groups') }, 'WWW::iDRAC::Error::Network', 'also for supports' );
+
+  for my $cause (qw( timeout host_key other )) {
+    my $broken = FakeRacadm->new( fail => WWW::iDRAC::Error::Network->new( message => 'broken', cause => $cause ) );
+    my $idrac2 = WWW::iDRAC->new( host => 'idrac.test', username => 'root', password => 'calvin', ua => FakeiDRAC->new, racadm => $broken->transport );
+    my $e = error_of { $idrac2->bios->groups };
+    isa_ok( $e, 'WWW::iDRAC::Error::Network', 'cause '.$cause.' stays a network error' );
+    is( $e && $e->cause, $cause, 'with its cause' );
+    ok( !( $e && $e->isa('WWW::iDRAC::Error::Unsupported') ), 'and is no Unsupported' );
+  }
+
+  my $away = FakeRacadm->new( fail => WWW::iDRAC::Error::Network->new( message => 'ssh: connect to host idrac.test port 22: No route to host', cause => 'unreachable' ) );
+  my $far  = WWW::iDRAC->new( host => 'idrac.test', username => 'root', password => 'calvin', ua => FakeiDRAC->new, racadm => $away->transport );
+  isa_ok( error_of { $far->bios->groups }, 'WWW::iDRAC::Error::Network', 'an unreachable controller stays a network error' );
+  isa_ok( error_of { $far->bios->supports('groups') }, 'WWW::iDRAC::Error::Network', 'also for supports' );
 };
 
 is_deeply( \@warnings, [], 'no warnings' );

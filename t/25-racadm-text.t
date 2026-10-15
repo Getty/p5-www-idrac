@@ -35,6 +35,18 @@ subtest 'quote' => sub {
   isa_ok( error_of { $R->quote( 'a' x 513 ) }, 'WWW::iDRAC::Error::Validation', 'too long' );
 };
 
+subtest 'quote_value' => sub {
+  is( $R->quote_value('Bios'), 'Bios', 'a value as quote has it' );
+  is( $R->quote_value('a-b'), 'a-b', 'a dash inside is fine' );
+  is( $R->quote_value(''), '""', 'and empty' );
+  for my $option ( '-d', '-f', '--help', '- x' ) {
+    my $e = error_of { $R->quote_value($option) };
+    isa_ok( $e, 'WWW::iDRAC::Error::Validation', 'a value racadm would read as an option: '.$option );
+    unlike( "$e", qr/\Q$option\E/, 'and the message does not carry it' );
+  }
+  isa_ok( error_of { $R->quote_value('a"b') }, 'WWW::iDRAC::Error::Validation', 'what quote refuses' );
+};
+
 subtest 'command_from' => sub {
   is( $R->command_from( get => 'BIOS.BiosBootSettings' ), 'racadm get BIOS.BiosBootSettings', 'get' );
   is( $R->command_from( qw( jobqueue view -i JID_123456789012 ) ), 'racadm jobqueue view -i JID_123456789012', 'jobqueue' );
@@ -76,6 +88,20 @@ subtest 'error_from' => sub {
 
   is( $R->error_from("\n\nERROR: RAC917 : bad\n")->{code}, 'RAC917', 'leading blank lines' );
   is( $R->error_from("ERROR: RAC917 : bad\r\n")->{message}, 'bad', 'and carriage returns' );
+
+  # an error that is not on the first line is an error all the same
+  $e = $R->error_from("[Key=BIOS.Setup.1-1#BiosBootSettings]\nERROR: RAC1019: The specified object is not supported for the current system \n       configuration.\n");
+  is( $e->{code}, 'RAC1019', 'ERROR: after a [Key=...] line' );
+  is( $e->{message}, 'The specified object is not supported for the current system configuration.', 'with the lines after it only' );
+  $e = $R->error_from("Security Alert: banner of the controller\n\nERROR: Unable to perform requested operation.\n");
+  is( $e->{code}, undef, 'ERROR: after a banner' );
+  is( $e->{message}, 'Unable to perform requested operation.', 'and its message' );
+  $e = $R->error_from("RAC1033: The job cannot be deleted.\n");
+  is( $e->{code}, 'RAC1033', 'a coded line that says it failed' );
+  $e = $R->error_from("banner\nRAC1033: The job cannot be deleted.\n");
+  is( $e && $e->{code}, 'RAC1033', 'also after a banner' );
+  is( $R->error_from("[Key=BIOS.Setup.1-1#BiosBootSettings]\nRAC1017: Successfully modified the object value and the change is in pending state.\n"), undef, 'a success after a [Key=...] line is none' );
+  is( $R->error_from("[Job ID=JID_000000000001]\nMessage=[ERROR: in a value]\n"), undef, 'nor ERROR: inside a value' );
 };
 
 subtest 'blocks_from' => sub {
@@ -125,6 +151,7 @@ subtest 'the options of the SSH client' => sub {
 
   my @file = $pairs->( $SSH->options_from( verify_host_key => 1, known_hosts => '/etc/idrac_hosts' ) );
   ok( ( grep { $_ eq 'UserKnownHostsFile=/etc/idrac_hosts' } @file ), 'a known_hosts file' );
+  ok( ( grep { $_ eq 'GlobalKnownHostsFile=/dev/null' } @file ), 'is all that counts' );
   ok( ( grep { $_ eq 'StrictHostKeyChecking=yes' } @file ), 'still strict' );
 
   my @pinned = $pairs->( $SSH->options_from( verify_host_key => 1, key_file => '/tmp/pin' ) );
@@ -151,11 +178,18 @@ subtest 'known_hosts_line_from' => sub {
 subtest 'cause_from' => sub {
   my %want = (
     'ssh: connect to host 192.0.2.1 port 22: Connection refused'                                 => 'refused',
-    'ssh: Could not resolve hostname idrac.test: Name or service not known'                      => 'refused',
+    'ssh: Could not resolve hostname idrac.test: Name or service not known'                      => 'unreachable',
+    'ssh: Could not resolve hostname idrac.test: Temporary failure in name resolution'           => 'unreachable',
+    'ssh: connect to host 192.0.2.1 port 22: No route to host'                                   => 'unreachable',
+    'ssh: connect to host 192.0.2.1 port 22: Network is unreachable'                             => 'unreachable',
+    'ssh: connect to host 192.0.2.1 port 22: Connection timed out'                               => 'unreachable',
+    'unable to establish master SSH connection: login timeout'                                   => 'timeout',
+    'unable to establish master SSH connection: bad password or master process exited unexpectedly' => 'other',
     'Host key verification failed.'                                                              => 'host_key',
     'WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!'                                           => 'host_key',
     'Permission denied (publickey,keyboard-interactive).'                                        => 'auth',
-    'bad password'                                                                               => 'auth',
+    'bad password'                                                                               => 'other',
+    'user\@192.0.2.1: Permission denied (keyboard-interactive,password).'                        => 'auth',
     'command timed out'                                                                          => 'timeout',
     'something else'                                                                             => 'other'
   );

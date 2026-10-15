@@ -62,6 +62,22 @@ subtest 'the license is read over racadm' => sub {
   my $switched_off = FakeRacadm->new;
   is( idrac( FakeiDRAC->new, racadm => $switched_off->transport( enabled => 0 ) )->capabilities->license, undef, 'undef with ssh => 0' );
   is_deeply( $switched_off->commands, [], 'and nothing sent' );
+  # what is no fact about the controller but about the way to it is thrown, and not kept
+  for my $cause (qw( auth host_key timeout unreachable other )) {
+    my $broken = FakeRacadm->new( fail => WWW::iDRAC::Error::Network->new( message => 'no', cause => $cause ) );
+    my $cap    = idrac( FakeiDRAC->new, ssh => 1, racadm => $broken->transport )->capabilities;
+    isa_ok( error_of { $cap->license }, 'WWW::iDRAC::Error::Network', 'a network error: '.$cause );
+    isa_ok( error_of { $cap->facts }, 'WWW::iDRAC::Error::Network', 'also for facts: '.$cause );
+    isa_ok( error_of { $cap->supports('jobs.list') }, 'WWW::iDRAC::Error::Network', 'as supports does: '.$cause );
+    $broken->{fail} = undef;
+    is( $cap->license, 'enterprise', 'and nothing is kept, the next read works: '.$cause );
+  }
+  my $invalid = FakeRacadm->new( fail => WWW::iDRAC::Error::Validation->new( message => 'no' ) );
+  isa_ok( error_of { idrac( FakeiDRAC->new, ssh => 1, racadm => $invalid->transport )->capabilities->license }, 'WWW::iDRAC::Error::Validation', 'a validation error' );
+  my $refused = FakeRacadm->new( fail => WWW::iDRAC::Error::Network->new( message => 'refused', cause => 'refused' ) );
+  my $closed  = idrac( FakeiDRAC->new, ssh => 1, racadm => $refused->transport )->capabilities;
+  ok( !$closed->supports('jobs.list'), 'nothing on the SSH port: supports says no' );
+  is( $closed->license, undef, 'and the license is undef, alike' );
   my $bad = FakeRacadm->new( fail => 'a bug in the runner' );
   ok( !eval { idrac( FakeiDRAC->new, ssh => 1, racadm => $bad->transport )->capabilities->license; 1 }, 'what is not one of our errors is not swallowed' );
 };

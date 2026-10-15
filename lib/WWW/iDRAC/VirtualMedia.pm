@@ -5,7 +5,6 @@ package WWW::iDRAC::VirtualMedia;
 use Moo;
 use Scalar::Util qw( blessed );
 use WWW::iDRAC::Error::Validation;
-use WWW::iDRAC::Racadm;
 use WWW::iDRAC::Util qw( text );
 use namespace::autoclean;
 
@@ -35,9 +34,12 @@ does not offer this (an iDRAC 8 with an Express license answers 403 for the
 resource); the racadm command C<remoteimage> does, and this class is served
 over it.
 
-It needs a license: racadm names it I<Remote File Share>, and an iDRAC 8
-with an Express license answers C<SWC0242> for it, which is
-L<WWW::iDRAC::Error::Unsupported> here. Reading the status works without.
+It needs a license: racadm names it I<Virtual Media> (C<Required License --
+Virtual Media>), and an iDRAC 8 with an Express license answers C<SWC0242>
+for C<get iDRAC.VirtualMedia>, which is L<WWW::iDRAC::Error::Unsupported>
+here. That C<remoteimage -c> and C<-d> need the same license is inferred from
+that refusal; it was not seen, because they were never run. Reading the
+status works without.
 
 The status is a hash with C<connected> (an image is attached), C<share>
 (its location), C<username> (the user the share is read with; the password
@@ -45,14 +47,19 @@ is never returned), and, where the license lets the controller say so,
 C<attach_mode>, C<boot_once> and C<enabled> of the virtual media
 configuration. A key the controller does not answer is C<undef>.
 
+C<connected> is true when C<remoteimage -s> prints C<Remote File Share is
+Enabled>, false for any other state word. Only the C<Disabled> form was
+seen, on both controllers; what racadm prints with an image attached was
+never seen.
+
 =cut
 
 sub status_from {
   my ( $class, $remote, $config ) = @_;
-  my $text = WWW::iDRAC::Racadm->text_from($remote);
+  my $text = $class->racadm_class->text_from($remote);
   my ($state) = $text =~ /^Remote File Share is\s+(\w+)/mi;
   my %line = map { /\A(UserName|ShareName)\s*(.*?)\s*\z/ ? ( $1 => $2 ) : () } split /\n/, $text;
-  my ($block) = defined $config ? WWW::iDRAC::Racadm->blocks_from($config) : ();
+  my ($block) = defined $config ? $class->racadm_class->blocks_from($config) : ();
   my %config = map { $_->{name} => $_->{value} } $block ? @{ $block->{entries} } : ();
   my $flag = sub { defined $_[0] && length $_[0] ? ( $_[0] =~ /\A(?:enabled|1|yes)\z/i ? 1 : 0 ) : undef };
   return {
@@ -106,6 +113,8 @@ sub connect {
     if defined $username xor defined $password;
   WWW::iDRAC::Error::Validation->throw( message => 'a CIFS share (//host/share/image.iso) needs username and password' )
     if $location =~ m{\A//} && !defined $username;
+  # what racadm would read as an option, or cannot be given safely, before anything is sent
+  $self->racadm_class->quote_value($_) for grep { defined } $location, $username, $password;
   $self->racadm_run(
     connect => remoteimage => '-c',
     ( defined $username ? ( '-u', $username, '-p', $password ) : () ),
@@ -122,13 +131,23 @@ Attaches an image and returns the status afterwards. C<location> is a CIFS
 share C<//host/share/image.iso>, an NFS export C<host:/export/image.iso> or an
 C<http://> or C<https://> address; C<username> and C<password> are for the
 share, mandatory for CIFS (racadm's own help says so) and given together.
-Characters racadm cannot be given safely are refused, see
-L<WWW::iDRAC::Racadm/quote>, which includes a password with a quote or a
-backslash in it. The password is part of no message.
+C<location>, C<username> and C<password> go through
+L<WWW::iDRAC::Racadm/quote_value>: characters racadm cannot be given safely
+are refused, which includes a password with a quote or a backslash in it, and
+so is a value that starts with C<->. A C<location> with C<?> or C<&> in it
+does not match the accepted forms and is refused too. The password is part of
+no message.
 
-Needs the license for remote file share, else
-L<WWW::iDRAC::Error::Unsupported>. Not run against hardware by the author of
-this distribution.
+B<The share password is not hidden on this machine.> It is an argument of the
+racadm command, and the command is one string sent through the SSH client: it
+appears in the arguments of the local C<ssh> process, which users of this
+machine can see (with C<ps> or in C</proc>), and on the controller. This is
+unlike the login password, which goes through the terminal prompt. Use a
+share account that may be exposed that way.
+
+Needs the Virtual Media license, else L<WWW::iDRAC::Error::Unsupported>,
+which is inferred from the refusal of C<get iDRAC.VirtualMedia> and not seen
+for this command. Not run against hardware; tested against a fake only.
 
 =cut
 
@@ -141,7 +160,7 @@ sub disconnect {
 =method disconnect
 
 Detaches the image and returns the status afterwards. Not run against
-hardware by the author of this distribution.
+hardware; tested against a fake only.
 
 =cut
 

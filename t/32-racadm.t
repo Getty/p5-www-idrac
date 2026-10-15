@@ -106,6 +106,67 @@ subtest 'construction' => sub {
   my $default = $make->()->runner;
   isa_ok( $default, 'WWW::iDRAC::Racadm::SSH', 'the default runner' );
   ok( !$default->connected, 'which does not connect before it is used' );
+
+  my $full = $make->(
+    port => 2222, timeout => 9, host_key => 'ssh-ed25519 AAAA', ssh_opts => ['KexAlgorithms=+diffie-hellman-group14-sha1']
+  )->runner;
+  is( $full->host, 'idrac.example.org', 'the runner gets the host' );
+  is( $full->username, 'root', 'the user' );
+  is( $full->password, 'calvin', 'the password' );
+  is( $full->port, 2222, 'the port' );
+  is( $full->timeout, 9, 'the timeout' );
+  is( $full->host_key, 'ssh-ed25519 AAAA', 'the host key' );
+  ok( !$full->has_known_hosts, 'and no known_hosts' );
+  ok( $full->verify_host_key, 'verification stays on' );
+  is_deeply( $full->ssh_opts, ['KexAlgorithms=+diffie-hellman-group14-sha1'], 'the ssh options' );
+
+  my $file = $make->( known_hosts => '/etc/idrac_hosts' )->runner;
+  is( $file->known_hosts, '/etc/idrac_hosts', 'a known_hosts file' );
+  ok( !$file->has_host_key, 'and no host key' );
+  my $open = $make->( verify_host_key => 0 )->runner;
+  ok( !$open->verify_host_key, 'verify_host_key => 0 reaches the runner' );
+  is_deeply( $open->ssh_opts, [], 'no ssh options by default' );
+  ok( !$open->has_known_hosts && !$open->has_host_key, 'nothing pinned' );
+
+  for my $bad ( [ port => 'ssh' ], [ port => '2.5' ], [ timeout => 'soon' ], [ timeout => undef ], [ ssh_opts => 'A=b' ], [ verify_host_key => [] ] ) {
+    ok( !eval { $make->( $bad->[0] => $bad->[1] ); 1 }, 'refused: '.$bad->[0].' => '.( $bad->[1] // 'undef' ) );
+  }
+};
+
+subtest 'api_error_class is the hook for the class racadm errors are thrown as' => sub {
+  {
+    package My::Error::API;
+    our @ISA = ('WWW::iDRAC::Error::API');
+  }
+  {
+    package My::Racadm;
+    our @ISA = ('WWW::iDRAC::Racadm');
+    sub api_error_class { 'My::Error::API' }
+  }
+  my $fake = FakeRacadm->new;
+  my $racadm = My::Racadm->new( host => 'idrac.test', username => 'root', password => 'calvin', runner => $fake );
+  my $e = error_of { $racadm->run( get => 'BIOS.Nonexistent' ) };
+  isa_ok( $e, 'My::Error::API', 'the error is of the class the hook names' );
+  is( $e && $e->message_id, 'RAC1020', 'with its code' );
+};
+
+subtest 'the process that made the object ends its connection' => sub {
+  my $fake   = FakeRacadm->new;
+  my $racadm = $fake->transport;
+  $racadm->run('getversion');
+  $racadm->run('getversion');
+  $racadm->{_pid} = $$ + 1;    # as in a child forked after the object was made
+  is( $racadm->logout, 0, 'one made in another process does not' );
+  ok( $fake->connected, 'and the connection stays' );
+  $racadm->{_pid} = $$;
+  is( $racadm->logout, 1, 'until its own process ends it' );
+};
+
+subtest 'an error that is not on the first line' => sub {
+  my $fake = FakeRacadm->new( replies => { 'racadm set BIOS.A.B x' => "[Key=BIOS.Setup.1-1#A]\nERROR: RAC1019: The specified object is not supported.\n" } );
+  my $e = error_of { $fake->transport->run( set => 'BIOS.A.B', 'x' ) };
+  isa_ok( $e, 'WWW::iDRAC::Error::API', 'is an error' );
+  is( $e && $e->message_id, 'RAC1019', 'with its code' );
 };
 
 subtest 'the connection ends with the object' => sub {

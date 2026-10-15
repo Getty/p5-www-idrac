@@ -35,7 +35,7 @@ only. These are never run by an agent; the live suite keeps them behind
   classes. Return hashes with fixed keys, never Redfish documents; each has `*_from`
   functions without I/O and a `probe_*` per public method.
 - `WWW::iDRAC::Racadm` — the second transport: `run` sends one racadm command and returns
-  the text; `quote`, `command_from`, `error_from`, `blocks_from` are pure. Closes its
+  the text; `quote`, `quote_value`, `command_from`, `error_from`, `blocks_from` are pure. Closes its
   connection when destroyed. `WWW::iDRAC::Racadm::SSH` — the I/O, over Net::OpenSSH,
   replaceable through `runner`; host key checked, one login attempt.
 - `WWW::iDRAC::Bios`, `::Jobs`, `::VirtualMedia` — the racadm capability classes, same
