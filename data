@@ -1,0 +1,13 @@
+---
+class: standard
+created: 2026-10-05T02:08:14Z
+id: 5
+priority: low
+status: backlog
+title: 'Phase 3: iDRAC 9/10'
+updated: 2026-10-20T05:11:54Z
+---
+
+Dell OEM actions, storage, firmware update. Only with such a controller at hand.
+
+2026-10-20 Koordination: Diese Karte bleibt im Backlog. Phase 3 (Dell-OEM-Aktionen, Storage, Firmware-Update) braucht einen iDRAC 9 oder 10 in der Hand; vorhanden sind bisher iDRAC 7 (kaiser) und iDRAC 8 (pikachu). Ohne die Hardware gibt es keinen ehrlichen Test, also kein Fortschritt zu melden. Die Karte ist hardware-gegated und wartet auf die passende Maschine.
