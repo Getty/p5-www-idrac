@@ -9,9 +9,9 @@ Revision history for WWW-iDRAC
       for quoting, errors and [Key=...] / [Job ID=...] blocks without I/O;
       racadm's ERROR: text becomes Error::API with its code in message_id
     - WWW::iDRAC::Racadm::SSH: the I/O over Net::OpenSSH; host key checked,
-      pinned with ssh_host_key or taken from ssh_known_hosts, ssh_verify_host_key
-      => 0 only on request; one login attempt; the password is no part of a
-      message
+      pinned with ssh_host_key or taken from ssh_known_hosts,
+      ssh_verify_host_key => 0 only on request; one login attempt; the
+      password is no part of a message
     - WWW::iDRAC::Bios: groups, group, get, set (staged, read-only refused
       before writing), commit (creates the job, no restart unless asked)
     - WWW::iDRAC::Jobs: list, get, delete, wait
