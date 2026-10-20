@@ -1,0 +1,34 @@
+---
+claimed_at: 2026-10-20T16:20:23Z
+claimed_by: p5-www-idrac
+class: standard
+completed: 2026-10-20T16:20:23Z
+created: 2026-10-20T16:13:56Z
+id: 9
+priority: medium
+started: 2026-10-20T16:20:23Z
+status: done
+tags:
+- release
+- prereq
+title: Das cpanfile nennt Types::Standard nicht
+updated: 2026-10-20T16:20:23Z
+---
+
+lib/WWW/iDRAC.pm:7 laedt Types::Standard (Bool HashRef InstanceOf Maybe Str). Das cpanfile nennt nur Type::Tiny - Types::Standard ist eine eigene Distribution und kein Kernmodul. Ein frischer Install bricht deshalb beim Laden der Bibliothek ab, nicht beim Bauen.
+
+Ergaenzt wird `requires 'Types::Standard';` im cpanfile (alphabetisch nach Type::Tiny).
+
+Dazu kommt t/cpanfile.t nach dem Hausmuster (siehe p5-www-hetzner): eine Liste der Laufzeit-Voraussetzungen, die das cpanfile nennen muss. Der Test muss gegen das alte cpanfile rot sein - Types::Standard fehlt dort - das ist der Nachweis, dass er die Luecke auch findet.
+
+Ursache: lib/WWW/iDRAC.pm:7, ::Redfish.pm, ::Racadm.pm, ::Racadm/SSH.pm und ::Capabilities.pm laden Types::Standard; das cpanfile nannte nur Type::Tiny. Types::Standard ist eine eigene Distribution, kein Kernmodul.
+
+Gefixt: requires 'Types::Standard'; im cpanfile (alphabetisch nach Type::Tiny), plus t/cpanfile.t als Hausmuster (Laufzeit- und Test-Voraussetzungen, Phase getrennt geprueft). Commit 2914e83 auf Branch k9-idrac.
+
+Roter Beweis: mit dem alten cpanfile aus main (git show main:cpanfile) ist t/cpanfile.t rot - 'Types::Standard is a declared prerequisite' schlaegt fehl (1 von 12 Tests); mit dem neuen cpanfile gruen (12/12). Volle Suite offline gruen: prove -lr t = 27 Dateien, 228 Tests; dzil test --all = 29 Dateien, 254 Tests. Live-Tests uebersprungen wie immer.
+
+Also found: IO::Pty und IO::Socket::SSL stehen im cpanfile, werden aber von lib/ nicht selbst geladen - Net::OpenSSH laedt IO::Pty (Passwort-Auth), LWP::Protocol::https IO::Socket::SSL. Die Testliste folgt lib/ und laesst sie deshalb weg; die cpanfile-Eintraege sind trotzdem berechtigt. Nicht angefasst.
+
+Fertig: cpanfile nennt Types::Standard (nach Type::Tiny); t/cpanfile.t haelt die Laufzeit- und Test-Voraussetzungen des cpanfile fest. Roter Beweis gegen das alte cpanfile aus main, dann gruen. Volle Suite gruen. Commit 2914e83 auf k9-idrac.
+
+2026-10-20 16:20 Koordinator: Commit 2914e83 liegt jetzt auf main (ff-only gemergt, kein Push). Roter Beweis vom Koordinator bestaetigt: mit dem alten cpanfile aus main ist t/cpanfile.t rot (1 von 12), mit dem neuen gruen; volle Suite 27 Dateien, 228 Tests, gruen.
