@@ -14,6 +14,17 @@ local $SIG{__WARN__} = sub { push @warnings, @_ };
 
 sub error_of (&) { my ( $code ) = @_; eval { $code->(); 1 } ? undef : $@ }
 
+# the value a call returns; an error of the library is in the diagnostics.
+# A method the library does not have at all is a failed expectation, not a
+# die that ends the file.
+sub value_of (&) {
+  my ( $code ) = @_;
+  my $value;
+  if ( eval { $value = $code->(); 1 } ) { return $value }
+  diag( ref $@ ? "$@" : 'the call died instead of returning a value' );
+  return;
+}
+
 sub setup {
   my ( %arg ) = @_;
   my $racadm = FakeRacadm->new(%arg);
@@ -39,8 +50,8 @@ subtest 'groups' => sub {
   my $busy   = WWW::iDRAC->new( host => 'idrac.test', username => 'root', password => 'calvin', ua => FakeiDRAC->new, racadm => $racadm->transport );
   $e = error_of { $busy->bios->groups };
   isa_ok( $e, 'WWW::iDRAC::Error::API', 'another error of racadm' );
-  ok( !$e->isa('WWW::iDRAC::Error::Unsupported'), 'is no Unsupported' );
-  is( $e->message_id, 'RAC1021', 'and keeps its code' );
+  ok( $e && !$e->isa('WWW::iDRAC::Error::Unsupported'), 'is no Unsupported' );
+  is( value_of { $e->message_id }, 'RAC1021', 'and keeps its code' );
 };
 
 subtest 'group and get' => sub {
@@ -140,7 +151,7 @@ subtest 'commit needs a job id in the answer' => sub {
   my $idrac = WWW::iDRAC->new( host => 'idrac.test', username => 'root', password => 'calvin', ua => FakeiDRAC->new, racadm => $racadm->transport );
   my $e = error_of { $idrac->bios->commit };
   isa_ok( $e, 'WWW::iDRAC::Error::API', 'an answer without JID_' );
-  like( "$e", qr/no job/i, 'says so' );
+  like( $e ? "$e" : 'no error at all', qr/no job/i, 'says so' );
   ok( !WWW::iDRAC::Bios->can('fqdd'), 'the component name is read inside, no method of the area' );
   isa_ok( error_of { $idrac->bios->supports('fqdd') }, 'WWW::iDRAC::Error::Validation', 'and no capability' );
 };

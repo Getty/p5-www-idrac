@@ -48,6 +48,17 @@ use WWW::iDRAC::Racadm::SSH;
 
 sub error_of (&) { my ( $code ) = @_; eval { $code->(); 1 } ? undef : $@ }
 
+# the value a call returns; an error of the library is in the diagnostics.
+# A library that throws where it should not is a failed expectation, not a
+# die that ends the file.
+sub value_of (&) {
+  my ( $code ) = @_;
+  my $value;
+  if ( eval { $value = $code->(); 1 } ) { return $value }
+  diag( ref $@ ? "$@" : 'the call died instead of returning a value' );
+  return;
+}
+
 sub ssh { WWW::iDRAC::Racadm::SSH->new( host => 'idrac.example.org', username => 'root', password => 'S3cret', @_ ) }
 
 sub reset_plan { @Net::OpenSSH::NEW = (); @Net::OpenSSH::CAPTURE = (); %Net::OpenSSH::PLAN = (); $Net::OpenSSH::CHECKS = 0 }
@@ -156,16 +167,18 @@ subtest 'a command that exits with a status that is not 0' => sub {
   reset_plan();
   @Net::OpenSSH::PLAN{qw( exit_code out )} = ( 1, "ERROR: RAC1033: The job cannot be deleted.\n" );
   my $ssh = ssh();
-  is( $ssh->run('racadm jobqueue delete -i JID_1'), "ERROR: RAC1033: The job cannot be deleted.\n", 'returns what it printed, for racadm to judge' );
+  # a library that throws on every failure of the command must not end the
+  # file: the calls are captured, so that the throw is a failed expectation
+  is( value_of { $ssh->run('racadm jobqueue delete -i JID_1') }, "ERROR: RAC1033: The job cannot be deleted.\n", 'returns what it printed, for racadm to judge' );
   ok( $ssh->connected, 'and keeps the connection' );
   is( $Net::OpenSSH::CHECKS, 1, 'after asking the master whether it is alive' );
   @Net::OpenSSH::PLAN{qw( exit_code out err )} = ( 1, '', "ERROR: on standard error\n" );
-  is( $ssh->run('y'), "ERROR: on standard error\n", 'or what it printed to standard error' );
+  is( value_of { $ssh->run('y') }, "ERROR: on standard error\n", 'or what it printed to standard error' );
   @Net::OpenSSH::PLAN{qw( exit_code out err )} = ( 3, '', '' );
   my $e = error_of { $ssh->run('z') };
   isa_ok( $e, 'WWW::iDRAC::Error::Network', 'a command that fails and prints nothing' );
   like( "$e", qr/code 3/, 'says so' );
-  is( $e->cause, 'other', 'cause other' );
+  is( $e && $e->cause, 'other', 'cause other' );
   ok( $ssh->connected, 'the connection stays' );
   is( scalar @Net::OpenSSH::NEW, 1, 'one connection for all of it' );
 

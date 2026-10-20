@@ -17,6 +17,17 @@ my $SSH = 'WWW::iDRAC::Racadm::SSH';
 
 sub error_of (&) { my ( $code ) = @_; eval { $code->(); 1 } ? undef : $@ }
 
+# the value a call returns; an error of the library is in the diagnostics.
+# A method the library does not have at all is a failed expectation, not a
+# die that ends the file.
+sub value_of (&) {
+  my ( $code ) = @_;
+  my $value;
+  if ( eval { $value = $code->(); 1 } ) { return $value }
+  diag( ref $@ ? "$@" : 'the call died instead of returning a value' );
+  return;
+}
+
 subtest 'quote' => sub {
   is( $R->quote('BIOS.BiosBootSettings.BootMode'), 'BIOS.BiosBootSettings.BootMode', 'a plain name as it is' );
   is( $R->quote('//host/share/a.iso'), '//host/share/a.iso', 'a share' );
@@ -36,9 +47,11 @@ subtest 'quote' => sub {
 };
 
 subtest 'quote_value' => sub {
-  is( $R->quote_value('Bios'), 'Bios', 'a value as quote has it' );
-  is( $R->quote_value('a-b'), 'a-b', 'a dash inside is fine' );
-  is( $R->quote_value(''), '""', 'and empty' );
+  # the library without quote_value must not end the file: the calls are
+  # captured, so that a missing method is a failed expectation
+  is( value_of { $R->quote_value('Bios') }, 'Bios', 'a value as quote has it' );
+  is( value_of { $R->quote_value('a-b') }, 'a-b', 'a dash inside is fine' );
+  is( value_of { $R->quote_value('') }, '""', 'and empty' );
   for my $option ( '-d', '-f', '--help', '- x' ) {
     my $e = error_of { $R->quote_value($option) };
     isa_ok( $e, 'WWW::iDRAC::Error::Validation', 'a value racadm would read as an option: '.$option );
@@ -91,11 +104,11 @@ subtest 'error_from' => sub {
 
   # an error that is not on the first line is an error all the same
   $e = $R->error_from("[Key=BIOS.Setup.1-1#BiosBootSettings]\nERROR: RAC1019: The specified object is not supported for the current system \n       configuration.\n");
-  is( $e->{code}, 'RAC1019', 'ERROR: after a [Key=...] line' );
-  is( $e->{message}, 'The specified object is not supported for the current system configuration.', 'with the lines after it only' );
+  is( $e ? $e->{code} : 'no error at all', 'RAC1019', 'ERROR: after a [Key=...] line' );
+  is( $e ? $e->{message} : 'no error at all', 'The specified object is not supported for the current system configuration.', 'with the lines after it only' );
   $e = $R->error_from("Security Alert: banner of the controller\n\nERROR: Unable to perform requested operation.\n");
-  is( $e->{code}, undef, 'ERROR: after a banner' );
-  is( $e->{message}, 'Unable to perform requested operation.', 'and its message' );
+  is( $e ? $e->{code} : 'no error at all', undef, 'ERROR: after a banner' );
+  is( $e ? $e->{message} : 'no error at all', 'Unable to perform requested operation.', 'and its message' );
   $e = $R->error_from("RAC1033: The job cannot be deleted.\n");
   is( $e->{code}, 'RAC1033', 'a coded line that says it failed' );
   $e = $R->error_from("banner\nRAC1033: The job cannot be deleted.\n");
