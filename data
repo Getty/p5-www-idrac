@@ -1,0 +1,29 @@
+---
+class: standard
+completed: 2026-10-20T09:10:07Z
+created: 2026-10-20T09:10:01Z
+id: 8
+priority: medium
+started: 2026-10-20T09:10:07Z
+status: done
+tags:
+- review
+- racadm
+title: 'Phase 2 review: the findings of the racadm transport review are fixed'
+updated: 2026-10-20T10:15:02Z
+---
+
+Die Review des Phase-2-Transports (racadm) hat Befunde in der SSH-Anbindung, in der Fehlerklassifikation, in der PID-Verwaltung, in der Lizenzbehandlung und in der Bereinigung der aufgezeichneten Ausgaben gefunden.
+
+Erledigt in drei Commits auf dem Branch worktree-phase2-review, nach main gezogen:
+- c08c198 Fix the phase 2 review findings in the racadm transport (lib/, Tests, README, CLAUDE.md, Spec, Rules, Changes)
+- 82410e3 Make the racadm tests fail on assertions, not on dies (t/25, t/33, t/55)
+- c7051d3 Add the skilletor worktree include file (eigener Commit, kein Karten-Commit)
+
+Nachweis: prove -lr t/ im Worktree gruen (Files=26, Tests=216, Result: PASS), ohne Live-Suite und ohne IDRAC_LIVE_DESTRUCTIVE. Der rote Beweis: 8 der 10 geaenderten Testdateien sind gegen das alte lib/ rot (Verhaltensfehler, kein die). t/37 prueft den neuen Testhelfer t/lib/iDRACSanitizeRacadm.pm und ist deshalb nur mit altem t/lib/ rot; t/85-fixtures.t haelt die zwei neuen connected-Pruefungen gegen das alte lib/ nicht fest, weil das Verhalten dort schon vorhanden war.
+
+Bewusst nicht geaendert: keine Live-Aufrufe, keine Karte #5 (Phase 3, Hardware iDRAC 9/10), keine Karte #4 (asynchroner Zwilling).
+
+Drei Commits nach main gezogen: c08c198 (die Review-Befunde im racadm-Transport), 82410e3 (die Tests scheitern jetzt an Erwartungen, nicht an einem die), c7051d3 (.worktreeinclude als eigener Commit). Nachweis: prove -lr t/ gruen, Files=26, Tests=216, Result: PASS, ohne Live-Suite und ohne IDRAC_LIVE_DESTRUCTIVE; 8 der 10 geaenderten Testdateien sind gegen das alte lib/ rot. t/37 prueft den neuen Testhelfer (nur mit altem t/lib/ rot), t/85 haelt die connected-Pruefungen gegen das alte lib/ nicht fest, weil das Verhalten schon vorhanden war.
+
+2026-10-20 Nachpruefung der Koordination: der Eintrag zum racadm-Transport stand mit 81 Spalten ueber der Hausgrenze von 78. Die Datei wurde umgebrochen, ohne ein Wort zu aendern. Commit 8fb87d5.
