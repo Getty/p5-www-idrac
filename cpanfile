@@ -10,6 +10,7 @@ requires 'Moo';
 requires 'namespace::autoclean', '0.16';
 requires 'Net::OpenSSH';
 requires 'Type::Tiny';
+requires 'Types::Standard';
 
 on test => sub {
     requires 'Test::More', '0.96';

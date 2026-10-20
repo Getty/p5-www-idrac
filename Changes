@@ -1,6 +1,9 @@
 Revision history for WWW-iDRAC
 
 {{$NEXT}}
+    - Types::Standard, the distribution the type constraints come from, is a
+      declared prerequisite; a fresh install loads the library instead of
+      failing on a missing type, and t/cpanfile.t holds the list
     - Phase 2: racadm over SSH as the second transport, for what Redfish
       lacks on an iDRAC 7 and 8. Measured on 2026-10-14 against an iDRAC 7
       (firmware 2.65) and an iDRAC 8 (2.50), reading only; nothing that
