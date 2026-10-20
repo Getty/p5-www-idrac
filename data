@@ -1,0 +1,13 @@
+---
+class: standard
+created: 2026-10-05T02:08:14Z
+id: 4
+priority: medium
+status: backlog
+title: 'Net::Async::iDRAC: the async twin'
+updated: 2026-10-20T05:11:53Z
+---
+
+Own repo p5-net-async-idrac, depends on WWW-iDRAC, reuses Role::HTTP's build_request/read_response and the *_from translations.
+
+2026-10-20 Koordination: Diese Karte bleibt im Backlog. Die Arbeit gehoert in das Repo p5-net-async-idrac, nicht in p5-www-idrac - der async-Zwilling ist ein eigenes Board und eine eigene Kampagne. Die Karte beschreibt die Arbeit richtig, sie wird nur nicht von hier aus angefasst: der Umfang dieser Kampagne sind die p5-www-Dists. Ueber den Zwillings-Sync entscheidet die async-Kampagne.
