@@ -26,6 +26,7 @@ WWW-iDRAC-*
 .claude/statsig/
 .claude/todos/
 .claude/projects/
+/.claude/worktrees/
 
 # karr materialized task view -- never commit
 tasks/

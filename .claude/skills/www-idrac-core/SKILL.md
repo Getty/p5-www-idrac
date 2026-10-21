@@ -53,6 +53,36 @@ HTTP role, error objects. The design is
 - **TLS verification is on by default**, and the dist never lowers TLS versions or ciphers.
 - **The password is in no error message and no fixture.**
 
+## Hazards — the mechanisms behind the short rules
+
+**Live tests hit a real server's management controller.** `t/90-live-idrac.t` is opt-in:
+it runs only when `IDRAC_HOST`, `IDRAC_USERNAME` and `IDRAC_PASSWORD` are set, and it
+only reads. It still talks to a machine that other people use, so it is never run
+uncontrolled and never in a fanned-out or parallel context. The default `prove -lr t`
+must pass with the live suite skipped — a run that only works with the environment set
+is not a green run.
+
+**`IDRAC_LIVE_DESTRUCTIVE=1` switches the machine off** and restarts its controller.
+An agent never sets it; only the maintainer runs that part. The trap: the flag reads
+like a harmless test switch, and one accidental export takes a real server down.
+
+**An iDRAC allows only a few sessions.** The controller counts them and refuses new
+logins. Code that logs in must end its session; a test that leaves one open is a defect
+that only shows up later — as the next test failing to log in.
+
+**Translation apart from I/O is what makes the async twin possible.** The `*_from`
+functions and `Role::HTTP`'s `build_request`/`read_response` stay free of I/O: the
+`Net::Async::iDRAC` twin is planned and reuses them. A translation that quietly opens a
+session or does a request cannot be reused.
+
+**iDRAC facts come from a recorded controller or Dell's documentation**, never from
+memory. Resource paths and field names differ between generations and firmware
+versions, so what the real ones answer lives in `t/fixtures/`. A path written from
+memory passes the fake controller and 404s on real hardware.
+
+**The test runner trap: plain `prove -l t/` is non-recursive.** It skips the subdir
+tests silently — the suite reports green without ever running them. Always `prove -lr t`.
+
 ## Tests
 
 `prove -lr t`. Unit tests run against `FakeiDRAC`, an `LWP::UserAgent` that serves a map
@@ -60,3 +90,25 @@ of path to document. `t/85-fixtures.t` runs every reading method against every r
 controller. `t/90-live-idrac.t` needs `IDRAC_HOST`, `IDRAC_USERNAME`, `IDRAC_PASSWORD` and
 only reads; `IDRAC_LIVE_DESTRUCTIVE=1` switches a real machine and is never set by an
 agent.
+
+## Recording a controller
+
+`t/idrac/record.pl` writes `t/fixtures/<name>/redfish.json` from a real controller. The
+chain behind it, and it is a chain with people in it:
+
+- `%KEEP` in `t/lib/iDRACRecorder.pm` decides which kinds of document are kept at all.
+  Widening it means reading what that kind of document holds first — the recorder
+  cannot know what a customer put into their own chassis.
+- `iDRACSanitize` strips what must not leave the machine: no service tag, no serial
+  number, no MAC, no address, no host name, no user name.
+- A person reads the result before it is committed. A recorded fixture is public — it
+  ships with the distribution.
+- Every recording gets an `expect.json` naming what that controller does not have. A key
+  that is `undef` in every row is either listed there or a bug in the client.
+
+## Related
+
+- `~/dev/p5-www-keycloak` — `WWW::Keycloak`, the shape this distribution follows.
+- `Net::Async::iDRAC` — the planned async twin; it reuses the `*_from` translations,
+  which is why they stay free of I/O.
+
