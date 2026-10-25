@@ -2,139 +2,139 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Die Dist `WWW-iDRAC` anlegen, beide vorhandenen iDRACs (7 und 8) lesend aufnehmen und Phase 1 bauen: Fassade, Fehler, Redfish-Transport, `capabilities` und die fünf Fähigkeits-Klassen `system`, `power`, `sensors`, `logs`, `manager`, mit Unit-Tests, Fixture-Test und Live-Suite.
+**Goal:** Create the dist `WWW-iDRAC`, record both existing iDRACs (7 and 8) read-only and build phase 1: facade, errors, Redfish transport, `capabilities` and the five capability classes `system`, `power`, `sensors`, `logs`, `manager`, with unit tests, fixture test and live suite.
 
-**Architecture:** Moo-Klassen nach dem Muster von `WWW::Keycloak`. `WWW::iDRAC` ist die Fassade und baut einen Redfish-Transport (`WWW::iDRAC::Redfish`: Session, einmaliges Neu-Anmelden bei 401, Navigation ohne feste Namen) und darauf fünf Fähigkeits-Klassen. Diese geben normalisierte Hashes mit festen Schlüsseln zurück, nie Redfish-Dokumente; die Übersetzung liegt in reinen Funktionen (`*_from`) ohne I/O, damit ein Async-Zwilling sie mitbenutzt. Was ein Controller nicht hat, wird vor dem Senden zu `WWW::iDRAC::Error::Unsupported`.
+**Architecture:** Moo classes following the pattern of `WWW::Keycloak`. `WWW::iDRAC` is the facade and builds a Redfish transport (`WWW::iDRAC::Redfish`: session, a single re-login on 401, navigation without fixed names) and five capability classes on top of it. These return normalized hashes with fixed keys, never Redfish documents; the translation lives in pure functions (`*_from`) without I/O, so an async twin can share them. What a controller does not have becomes `WWW::iDRAC::Error::Unsupported` before sending.
 
-**Tech Stack:** Perl 5.20+, Moo, Types::Standard, LWP::UserAgent, LWP::Protocol::https, IO::Socket::SSL, HTTP::Message, JSON::MaybeXS. Dist::Zilla mit `[@Author::GETTY]`.
+**Tech Stack:** Perl 5.20+, Moo, Types::Standard, LWP::UserAgent, LWP::Protocol::https, IO::Socket::SSL, HTTP::Message, JSON::MaybeXS. Dist::Zilla with `[@Author::GETTY]`.
 
-**Spec:** `docs/superpowers/specs/2026-10-04-www-idrac-design.md` (freigegeben 2026-10-04). Bis Aufgabe 1 liegt sie im Hub `~/dev/perl-developer`, danach in der Dist.
+**Spec:** `docs/superpowers/specs/2026-10-04-www-idrac-design.md` (approved 2026-10-04). Until task 1 it lives in the hub `~/dev/perl-developer`, afterwards in the dist.
 
-## Ausgeführt am 2026-10-05
+## Executed on 2026-10-05
 
-Aufgaben 1 bis 4 und 6 bis 11 sind vollständig umgesetzt, ein Commit pro Aufgabe (`56a8192` bis `e50bbd2`); von Aufgabe 12 der Test, von Aufgabe 13 Live-Suite und Dokumentation (`a7b1576`, `7af422f`). **Offen sind Aufgabe 5, Step 3 von Aufgabe 12 und Step 3 und 4 von Aufgabe 13**: Sie brauchen die beiden Geräte.
+Tasks 1 to 4 and 6 to 11 are fully implemented, one commit per task (`56a8192` to `e50bbd2`); from task 12 the test, from task 13 the live suite and documentation (`a7b1576`, `7af422f`). **Open are task 5, step 3 of task 12 and steps 3 and 4 of task 13**: they need the two devices.
 
-Danach hat ein unabhängiger Review des ganzen Stands einen kritischen und sieben wichtige Befunde gebracht, die in fünf eigenen Commits behoben sind (`05b3ff5` bis `cf275b3`). **Der Code im Repo weicht dort von den Listings unten ab; maßgeblich ist das Repo.** Was sich geändert hat:
+Afterwards an independent review of the whole state brought one critical and seven important findings, which are fixed in five separate commits (`05b3ff5` to `cf275b3`). **The code in the repo differs from the listings below there; the repo is authoritative.** What changed:
 
-- **Sessions.** Offene Sessions werden in einem `END`-Block beendet, weil ein Client in einer dateiweiten Variable bis in die globale Zerstörung lebt und das Logout dort scheiterte. Ein 401, der nicht an der Session liegt, hinterlässt keine Session mehr pro Anfrage. Ein `logout`, das der Controller ablehnt, wirft nicht.
-- **Transport.** Eine Erfolgsantwort, deren Body kein JSON ist, ist ein `Error::API`. `locate` merkt sich keinen Fehltreffer. Der User-Agent folgt keinem Redirect (`max_redirect => 0`), weil der Token oder das Passwort mitginge. Folge für Aufgabe 5: Antwortet ein iDRAC auf `/redfish/v1/` mit einem Redirect, zeigt sich das dort als `Error::API` mit Status 30x.
-- **`supports`.** Die Proben holen das Dokument hinter dem Link, nicht nur den Link; `supports` und Methode sagen jetzt dasselbe. Ein 404 auf dem Weg zu System, Chassis oder Manager und eine Antwort, die kein Dokument ist, werden `Unsupported`.
-- **Aufnahmen.** Der Recorder behält nur noch die Dokumentarten, die die Tests lesen (nach `@odata.type`); alles andere wird für die Zusammenfassung abgelaufen und verworfen. Die Bereinigung lässt `Oem`, `Location` und den Text von Log-Meldungen weg, erkennt Schlüssel an ihrem letzten Punkt-Bestandteil (`Users.3.UserName`), findet benannte Werte unabhängig von der Schreibung, lässt Zahlen Zahlen sein und meldet Lecks als Art und Dokument statt die Werte auszugeben.
-- **Fixture-Test.** Jede Aufnahme braucht ein `expect.json` daneben, das sagt, was der Controller nicht hat; ohne die Datei scheitert der Test und druckt, was er gefunden hat (siehe Aufgabe 12).
-- **Live-Suite.** Der schaltende Teil verlangt genau `IDRAC_LIVE_DESTRUCTIVE=1`, schaltet den Strom nur mit `IDRAC_LIVE_FORCE_OFF=1` hart ab und stellt den vorgefundenen Zustand wieder her.
+- **Sessions.** Open sessions are ended in an `END` block, because a client in a file-scoped variable lives until global destruction and the logout failed there. A 401 that is not caused by the session no longer leaves a session behind per request. A `logout` that the controller rejects does not throw.
+- **Transport.** A success response whose body is not JSON is an `Error::API`. `locate` does not remember a miss. The user agent follows no redirect (`max_redirect => 0`), because the token or the password would go along. Consequence for task 5: if an iDRAC answers `/redfish/v1/` with a redirect, it shows up there as an `Error::API` with status 30x.
+- **`supports`.** The probes fetch the document behind the link, not just the link; `supports` and the method now say the same thing. A 404 on the way to system, chassis or manager and a response that is not a document become `Unsupported`.
+- **Recordings.** The recorder now keeps only the document types the tests read (by `@odata.type`); everything else is walked for the summary and discarded. Sanitizing drops `Oem`, `Location` and the text of log messages, recognizes keys by their last dotted component (`Users.3.UserName`), finds named values regardless of case, lets numbers stay numbers and reports leaks as kind and document instead of printing the values.
+- **Fixture test.** Every recording needs an `expect.json` next to it that says what the controller does not have; without the file the test fails and prints what it found (see task 12).
+- **Live suite.** The switching part requires exactly `IDRAC_LIVE_DESTRUCTIVE=1`, cuts power hard only with `IDRAC_LIVE_FORCE_OFF=1` and restores the state it found.
 
-Nicht umgesetzt, sondern für Aufgabe 5 vorgemerkt: die Vermutungen des Reviews über das Verhalten von iDRAC 7/8 (Spec-Abschnitt 9, zweite Tabelle).
+Not implemented, but noted for task 5: the review's assumptions about the behavior of iDRAC 7/8 (spec section 9, second table).
 
-## Stand des Codes in diesem Plan
+## State of the code in this plan
 
-Der gesamte Code dieses Plans ist am 2026-10-04 als Wegwerf-Prototyp gelaufen, Aufgabe für Aufgabe in der Reihenfolge unten aufgebaut: `prove -lr t` war nach jeder Stufe grün, am Ende 16 Dateien und 92 Tests. Zusätzlich geprüft:
+All the code of this plan ran on 2026-10-04 as a throwaway prototype, built up task by task in the order below: `prove -lr t` was green after every stage, at the end 16 files and 92 tests. Additionally checked:
 
-- `t/idrac/record.pl` von Anfang bis Ende gegen den nachgebauten iDRAC, die Aufnahme danach in `t/85-fixtures.t`.
-- `t/90-live-idrac.t` einschließlich des schaltenden Teils gegen den nachgebauten iDRAC.
-- Die TLS-Optionen gegen einen echten lokalen TLS-Server mit selbstsigniertem Zertifikat auf fremden Namen: Standard lehnt ab, `ssl_fingerprint` nimmt an, ein falscher Fingerprint lehnt ab, `ssl_ca_file` allein scheitert am Namen, `verify_ssl => 0` nimmt an.
-- Das Session-Ende beim Programmende, auch nach `exit` und `die`, ohne den Exit-Code zu verändern.
+- `t/idrac/record.pl` from start to finish against the emulated iDRAC, the recording afterwards in `t/85-fixtures.t`.
+- `t/90-live-idrac.t` including the switching part against the emulated iDRAC.
+- The TLS options against a real local TLS server with a self-signed certificate for a foreign name: the default rejects, `ssl_fingerprint` accepts, a wrong fingerprint rejects, `ssl_ca_file` alone fails on the name, `verify_ssl => 0` accepts.
+- Ending the session at program end, also after `exit` and `die`, without changing the exit code.
 
-**Nicht geprüft:** nichts davon ist gegen einen echten iDRAC gelaufen, und `dzil test` ist nicht gelaufen. Alles, was der Code über Redfish-Feldnamen eines iDRAC 7/8 annimmt, ist bis Aufgabe 5 eine Annahme. Dafür gibt es die Aufgaben 5, 12 und 13.
+**Not checked:** none of it has run against a real iDRAC, and `dzil test` has not run. Everything the code assumes about Redfish field names of an iDRAC 7/8 is an assumption until task 5. That is what tasks 5, 12 and 13 are for.
 
-## Abweichungen von der Spec
+## Deviations from the spec
 
-Beim Bau des Prototyps entschieden, in der Spec nachgetragen:
+Decided while building the prototype, added to the spec:
 
-- **Reihenfolge.** Der Recorder braucht den Transport. Deshalb stehen Fehler, HTTP-Rolle und Transport (Aufgaben 2 bis 4) vor dem Beobachten am Gerät (Aufgabe 5) und gehören mit zu Karte 1.
-- **`URI` ist nur Test-Abhängigkeit**, der Code unter `lib/` benutzt es nicht.
-- **`power->state`** kann neben `on` und `off` einen Zwischenzustand liefern (`powering_on`), in derselben Form.
-- **`ssl_ca_file` allein passt nicht zum Werkszertifikat**, weil dessen Name nicht die Adresse ist. Der Weg für das Werkszertifikat ist `ssl_fingerprint`.
+- **Order.** The recorder needs the transport. Therefore errors, HTTP role and transport (tasks 2 to 4) come before observing on the device (task 5) and belong to card 1 as well.
+- **`URI` is only a test dependency**, the code under `lib/` does not use it.
+- **`power->state`** can return an intermediate state (`powering_on`) besides `on` and `off`, in the same form.
+- **`ssl_ca_file` alone does not fit the factory certificate**, because its name is not the address. The way for the factory certificate is `ssl_fingerprint`.
 
-Ohne Änderung der Spec, aber gut zu wissen:
+No change to the spec, but good to know:
 
-- Die Session beendet der Transport (`WWW::iDRAC::Redfish::DEMOLISH`), nicht die Fassade. So endet sie auch, wenn ein Teil die Fassade überlebt.
-- `capabilities->model` ist das Modell des Servers. Das Modell, das der Manager meldet (`13G Monolithic`), steht in `manager->info`.
-- `capabilities->license` ist in Phase 1 immer `undef`. Ob die Lizenz lesbar ist, misst Aufgabe 5; wenn ja, entsteht eine Karte.
-- `logs` holt ohne Angabe 50 Einträge und nimmt an, dass der Controller die neuesten zuerst liefert. Die Live-Suite prüft das.
-- Über die Spec hinaus gibt es `WWW::iDRAC::Util`, `WWW::iDRAC::Role::Capability`, `supports` auch an jeder Fähigkeits-Klasse und `t/lib/iDRACRecorder.pm`.
+- The session is ended by the transport (`WWW::iDRAC::Redfish::DEMOLISH`), not by the facade. So it also ends when a part outlives the facade.
+- `capabilities->model` is the model of the server. The model the manager reports (`13G Monolithic`) is in `manager->info`.
+- `capabilities->license` is always `undef` in phase 1. Whether the license is readable is measured by task 5; if so, a card is created.
+- `logs` fetches 50 entries by default and assumes that the controller delivers the newest first. The live suite checks that.
+- Beyond the spec there are `WWW::iDRAC::Util`, `WWW::iDRAC::Role::Capability`, `supports` also on every capability class, and `t/lib/iDRACRecorder.pm`.
 
-## Ausführung
+## Execution
 
-- **Aufgabe 1** läuft in der Hub-Session (`~/dev/perl-developer`); dort gibt es die Agenten der Dist noch nicht.
-- **Aufgaben 2 bis 13** laufen in `~/dev/p5-www-idrac` mit den Agenten der Dist. Der Worker baut, der Release-Manager committet.
-- **Aufgabe 5** braucht Getty: Adressen und Zugangsdaten der beiden iDRACs, und die Durchsicht der Aufnahmen. Ist der Zugriff noch nicht da, gehen die Aufgaben 6 bis 11 trotzdem; sie hängen nicht an den Aufnahmen. Aufgabe 12 und der Live-Lauf in Aufgabe 13 warten auf Aufgabe 5.
-- Kein GitHub-Repo, kein Push. Beides entsteht erst auf Gettys Zuruf.
+- **Task 1** runs in the hub session (`~/dev/perl-developer`); the dist's agents do not exist there yet.
+- **Tasks 2 to 13** run in `~/dev/p5-www-idrac` with the dist's agents. The worker builds, the release manager commits.
+- **Task 5** needs Getty: addresses and credentials of the two iDRACs, and the review of the recordings. If access is not there yet, tasks 6 to 11 work anyway; they do not depend on the recordings. Task 12 and the live run in task 13 wait for task 5.
+- No GitHub repo, no push. Both only come on Getty's say-so.
 
 ## Global Constraints
 
-- Perl 5.020. Laufzeit-Abhängigkeiten genau die im `cpanfile` aus Aufgabe 1.
-- Ein Paket pro Datei, jede Datei unter `lib/` mit `# ABSTRACT:` und `our $VERSION = '0.001';`. Kein `require` zum verzögerten Laden unter `lib/`.
-- Jeder Fehler ist ein Objekt aus `WWW::iDRAC::Error::*`, geworfen mit `->throw`. Das Passwort steht in keiner Fehlermeldung und in keinem Fixture.
-- Fähigkeits-Klassen geben Hashrefs oder Arrayrefs von Hashrefs mit festen Schlüsseln in `snake_case` zurück, nie Redfish-Dokumente. Ein Schlüssel ohne Quelle ist vorhanden und `undef`. `health` ist `ok`, `warning`, `critical` oder `undef`. Die Schlüssel stehen einmal, in `t/lib/iDRACShapes.pm`, und sind die aus Spec-Abschnitt 5.
-- Nur `WWW::iDRAC::Redfish` kennt Pfade. Im Code unter `lib/` steht kein fester Ressourcenname wie `System.Embedded.1` oder `iDRAC.Embedded.1` (POD-Beispiele ausgenommen).
-- `WWW::iDRAC::Error::Unsupported` werfen nur die Fähigkeits-Klassen, und zwar bevor etwas gesendet wird. Der Transport übersetzt nichts.
-- Jede öffentliche Methode `x` einer Fähigkeits-Klasse hat ein `probe_x`.
-- TLS-Prüfung ist standardmäßig an. Die Dist schaltet weder TLS-Versionen noch Cipher herunter.
-- Keine Transport-Abstraktion in Phase 1.
-- Controller-Verhalten wird nicht aus dem Gedächtnis kodiert. Die Standard-Dokumente von `t/lib/FakeiDRAC.pm` sind erfunden und sagen das; was ein echter iDRAC antwortet, steht in `t/fixtures/<name>/redfish.json`.
-- Fixtures laufen durch `iDRACSanitize` und werden von einem Menschen gelesen, bevor sie committet werden.
-- Jede `.t`-Datei beginnt mit `#!/usr/bin/env perl`, `use strict; use warnings; use Test::More;` und endet mit `done_testing;`. Tests laufen mit `prove -lr t`.
-- Die Live-Suite läuft nur mit `IDRAC_HOST`, `IDRAC_USERNAME`, `IDRAC_PASSWORD`. `IDRAC_LIVE_DESTRUCTIVE=1` setzt nie ein Agent, nur Getty.
-- **Ab Aufgabe 2 committet niemand außer `www-idrac-release-manager`.** Jede Aufgabe endet mit einem commit-fertigen Baum und einer Übergabe.
+- Perl 5.020. Runtime dependencies exactly those in the `cpanfile` from task 1.
+- One package per file, every file under `lib/` with `# ABSTRACT:` and `our $VERSION = '0.001';`. No `require` for lazy loading under `lib/`.
+- Every error is an object from `WWW::iDRAC::Error::*`, thrown with `->throw`. The password appears in no error message and in no fixture.
+- Capability classes return hashrefs or arrayrefs of hashrefs with fixed keys in `snake_case`, never Redfish documents. A key without a source is present and `undef`. `health` is `ok`, `warning`, `critical` or `undef`. The keys are listed once, in `t/lib/iDRACShapes.pm`, and are those from spec section 5.
+- Only `WWW::iDRAC::Redfish` knows paths. The code under `lib/` contains no fixed resource name like `System.Embedded.1` or `iDRAC.Embedded.1` (POD examples excepted).
+- `WWW::iDRAC::Error::Unsupported` is thrown only by the capability classes, and before anything is sent. The transport translates nothing.
+- Every public method `x` of a capability class has a `probe_x`.
+- TLS verification is on by default. The dist downgrades neither TLS versions nor ciphers.
+- No transport abstraction in phase 1.
+- Controller behavior is not coded from memory. The default documents of `t/lib/FakeiDRAC.pm` are invented and say so; what a real iDRAC answers is in `t/fixtures/<name>/redfish.json`.
+- Fixtures go through `iDRACSanitize` and are read by a human before they are committed.
+- Every `.t` file starts with `#!/usr/bin/env perl`, `use strict; use warnings; use Test::More;` and ends with `done_testing;`. Tests run with `prove -lr t`.
+- The live suite runs only with `IDRAC_HOST`, `IDRAC_USERNAME`, `IDRAC_PASSWORD`. `IDRAC_LIVE_DESTRUCTIVE=1` is never set by an agent, only by Getty.
+- **From task 2 on nobody except `www-idrac-release-manager` commits.** Every task ends with a commit-ready tree and a handover.
 
 ## Review Focus
 
-1. **Eine Session, die niemand beendet.** Ein iDRAC lässt nur wenige zu; ein Skript, das stirbt oder `logout` vergisst, sperrt nach ein paar Läufen alle aus. Erwartet: Die Session endet mit dem letzten Objekt, das sie benutzt, und ein Logout, das der Controller ablehnt, wirft nicht. Tests `a session is ended when the object goes away` in `t/30-redfish.t` (Aufgabe 3), `no session is left behind` in `t/40-facade.t` (Aufgabe 6), `the capabilities outlive the facade` in `t/60-capabilities.t` (Aufgabe 11).
-2. **Der Controller startet mitten im Lauf neu oder die Session läuft ab.** Erwartet: genau ein neuer Login, dann geht es weiter; bei falschem Passwort ein klarer 401 ohne Schleife und ohne Passwort in der Meldung. Tests `a refused token is renewed once` und `wrong credentials` in `t/30-redfish.t` (Aufgabe 3), `restart` in `t/54-manager.t` (Aufgabe 10).
-3. **Ein Controller, dem eine Ressource fehlt** (keine Memory-Collection, kein Thermal, keine Log-Services, ein Link ins Leere). Erwartet: `Unsupported` mit dem Namen der Fähigkeit, kein roher 404 und kein Absturz; `supports` sagt dasselbe. Tests `memory` und `supports` in `t/50-system.t` (Aufgabe 6), `a chassis without sensors` in `t/52-sensors.t` (Aufgabe 8), `a controller without these logs` in `t/53-logs.t` (Aufgabe 9), und `t/85-fixtures.t` gegen die echten Aufnahmen (Aufgabe 12).
-4. **Messwerte, die fehlen oder keine Zahl sind** (leerer Sockel, `null`, `"N/A"`, eine Liste, die keine ist). Erwartet: Schlüssel vorhanden und `undef`, eine leere Liste statt eines Absturzes, keine Warnung. Tests `t/15-util.t` (Aufgabe 6), `documents that are not what they should be` in `t/52-sensors.t` (Aufgabe 8), und die Zeile `no warnings` am Ende jeder Test-Datei der Fähigkeits-Klassen.
-5. **Ein Schaltbefehl, den dieser Controller nicht anbietet** (`PowerCycle` fehlt in den erlaubten Werten). Erwartet: `Unsupported`, und es wurde nichts gesendet. Tests `an order this controller does not offer` in `t/51-power.t` (Aufgabe 7), `a controller that offers less` in `t/54-manager.t` (Aufgabe 10), `clear_sel` ohne Action in `t/53-logs.t` (Aufgabe 9).
+1. **A session that nobody ends.** An iDRAC allows only a few; a script that dies or forgets `logout` locks everyone out after a few runs. Expected: the session ends with the last object that uses it, and a logout that the controller rejects does not throw. Tests `a session is ended when the object goes away` in `t/30-redfish.t` (task 3), `no session is left behind` in `t/40-facade.t` (task 6), `the capabilities outlive the facade` in `t/60-capabilities.t` (task 11).
+2. **The controller restarts in the middle of a run or the session expires.** Expected: exactly one new login, then it continues; with a wrong password a clear 401 without a loop and without the password in the message. Tests `a refused token is renewed once` and `wrong credentials` in `t/30-redfish.t` (task 3), `restart` in `t/54-manager.t` (task 10).
+3. **A controller that lacks a resource** (no memory collection, no thermal, no log services, a link into nothing). Expected: `Unsupported` with the name of the capability, no raw 404 and no crash; `supports` says the same. Tests `memory` and `supports` in `t/50-system.t` (task 6), `a chassis without sensors` in `t/52-sensors.t` (task 8), `a controller without these logs` in `t/53-logs.t` (task 9), and `t/85-fixtures.t` against the real recordings (task 12).
+4. **Readings that are missing or not a number** (empty socket, `null`, `"N/A"`, a list that is not one). Expected: key present and `undef`, an empty list instead of a crash, no warning. Tests `t/15-util.t` (task 6), `documents that are not what they should be` in `t/52-sensors.t` (task 8), and the `no warnings` line at the end of every test file of the capability classes.
+5. **A switching command this controller does not offer** (`PowerCycle` missing from the allowed values). Expected: `Unsupported`, and nothing was sent. Tests `an order this controller does not offer` in `t/51-power.t` (task 7), `a controller that offers less` in `t/54-manager.t` (task 10), `clear_sel` without an action in `t/53-logs.t` (task 9).
 
-## Dateien
+## Files
 
-| Datei | Verantwortung | Aufgabe |
+| File | Responsibility | Task |
 |---|---|---|
-| `dist.ini`, `cpanfile`, `Changes`, `README.md`, `CLAUDE.md`, `.gitignore`, `LICENSE`, `.github/workflows/ci.yml`, `.claude/**` | Gerüst, Agenten-Team | 1 |
-| `lib/WWW/iDRAC/Error.pm`, `Error/Validation.pm`, `Error/Network.pm`, `Error/API.pm`, `Error/Unsupported.pm` | Fehlerhierarchie | 2 |
-| `lib/WWW/iDRAC/Role/HTTP.pm` | Senden, JSON, Redfishs Fehlerdokument | 2 |
-| `lib/WWW/iDRAC/Redfish.pm` | Transport: Session, Verben, `members`, `locate` | 3 |
-| `t/lib/FakeiDRAC.pm` | nachgebauter iDRAC für die Unit-Tests | 3 |
-| `t/lib/iDRACSanitize.pm` | Aufnahmen bereinigen | 4 |
-| `t/lib/iDRACRecorder.pm`, `t/idrac/record.pl` | Redfish-Baum aufnehmen | 4 |
-| `t/fixtures/idrac7/redfish.json`, `t/fixtures/idrac8/redfish.json` | was die echten Controller antworten | 5 |
-| `lib/WWW/iDRAC/Util.pm` | reine Übersetzungen | 6 |
-| `lib/WWW/iDRAC/Role/Capability.pm` | was die Fähigkeits-Klassen teilen | 6 |
-| `lib/WWW/iDRAC/System.pm` | Inventar | 6 |
-| `lib/WWW/iDRAC.pm` | Fassade (der Stub wird ersetzt, danach je Aufgabe ergänzt) | 6 bis 11 |
-| `t/lib/iDRACShapes.pm` | die dokumentierten Schlüssel, einmal | 6 |
-| `lib/WWW/iDRAC/Power.pm` | Schalten, Leistungsaufnahme | 7 |
-| `lib/WWW/iDRAC/Sensors.pm` | Temperaturen, Lüfter, Spannungen, Netzteile | 8 |
-| `lib/WWW/iDRAC/Logs.pm` | SEL und Lifecycle-Log | 9 |
-| `lib/WWW/iDRAC/Manager.pm` | der iDRAC selbst | 10 |
-| `lib/WWW/iDRAC/Capabilities.pm` | Fakten und `supports` | 11 |
-| `t/85-fixtures.t` | jede lesende Methode gegen jede Aufnahme | 12 |
-| `t/90-live-idrac.t`, `README.md`, `CLAUDE.md`, `Changes` | Live-Suite, Einstieg | 13 |
+| `dist.ini`, `cpanfile`, `Changes`, `README.md`, `CLAUDE.md`, `.gitignore`, `LICENSE`, `.github/workflows/ci.yml`, `.claude/**` | scaffold, agent team | 1 |
+| `lib/WWW/iDRAC/Error.pm`, `Error/Validation.pm`, `Error/Network.pm`, `Error/API.pm`, `Error/Unsupported.pm` | error hierarchy | 2 |
+| `lib/WWW/iDRAC/Role/HTTP.pm` | sending, JSON, Redfish's error document | 2 |
+| `lib/WWW/iDRAC/Redfish.pm` | transport: session, verbs, `members`, `locate` | 3 |
+| `t/lib/FakeiDRAC.pm` | emulated iDRAC for the unit tests | 3 |
+| `t/lib/iDRACSanitize.pm` | sanitize recordings | 4 |
+| `t/lib/iDRACRecorder.pm`, `t/idrac/record.pl` | record the Redfish tree | 4 |
+| `t/fixtures/idrac7/redfish.json`, `t/fixtures/idrac8/redfish.json` | what the real controllers answer | 5 |
+| `lib/WWW/iDRAC/Util.pm` | pure translations | 6 |
+| `lib/WWW/iDRAC/Role/Capability.pm` | what the capability classes share | 6 |
+| `lib/WWW/iDRAC/System.pm` | inventory | 6 |
+| `lib/WWW/iDRAC.pm` | facade (the stub is replaced, then extended per task) | 6 to 11 |
+| `t/lib/iDRACShapes.pm` | the documented keys, once | 6 |
+| `lib/WWW/iDRAC/Power.pm` | switching, power consumption | 7 |
+| `lib/WWW/iDRAC/Sensors.pm` | temperatures, fans, voltages, power supplies | 8 |
+| `lib/WWW/iDRAC/Logs.pm` | SEL and lifecycle log | 9 |
+| `lib/WWW/iDRAC/Manager.pm` | the iDRAC itself | 10 |
+| `lib/WWW/iDRAC/Capabilities.pm` | facts and `supports` | 11 |
+| `t/85-fixtures.t` | every reading method against every recording | 12 |
+| `t/90-live-idrac.t`, `README.md`, `CLAUDE.md`, `Changes` | live suite, entry point | 13 |
 
-Reihenfolge: 1 → 2 → 3 → 4 → 5, dann 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13. Zuordnung zum Board: Aufgaben 2 bis 5 → Karte 1 (beobachten), Aufgaben 6 bis 13 → Karte 2 (Phase 1).
+Order: 1 → 2 → 3 → 4 → 5, then 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13. Mapping to the board: tasks 2 to 5 → card 1 (observe), tasks 6 to 13 → card 2 (phase 1).
 
 ---
 
-### Task 1: Anlage — Repo, Gerüst, Agenten-Team, Board
+### Task 1: Setup — repo, scaffold, agent team, board
 
-Läuft in der Hub-Session. Vorbild ist das Gerüst von `p5-www-authentik` (dort Commit `3c9b5ac`).
+Runs in the hub session. The model is the scaffold of `p5-www-authentik` (commit `3c9b5ac` there).
 
 **Files:**
-- Create: `~/dev/p5-www-idrac/` mit `dist.ini`, `cpanfile`, `Changes`, `README.md`, `CLAUDE.md`, `.gitignore`, `LICENSE`, `.github/workflows/ci.yml`, `lib/WWW/iDRAC.pm`, `t/00-load.t`
-- Create: `~/dev/p5-www-idrac/.claude/` mit `agents/www-idrac-{worker,test-writer,release-manager,doc-writer}.md`, `rules/www-idrac-rules.md`, `skills/www-idrac-core/SKILL.md`, `settings.json`, `skilletor.json`, `.gitignore`
-- Create: `~/dev/p5-www-idrac/docs/superpowers/specs/2026-10-04-www-idrac-design.md`, `docs/superpowers/plans/2026-10-04-www-idrac-phase-1.md` (aus dem Hub)
+- Create: `~/dev/p5-www-idrac/` with `dist.ini`, `cpanfile`, `Changes`, `README.md`, `CLAUDE.md`, `.gitignore`, `LICENSE`, `.github/workflows/ci.yml`, `lib/WWW/iDRAC.pm`, `t/00-load.t`
+- Create: `~/dev/p5-www-idrac/.claude/` with `agents/www-idrac-{worker,test-writer,release-manager,doc-writer}.md`, `rules/www-idrac-rules.md`, `skills/www-idrac-core/SKILL.md`, `settings.json`, `skilletor.json`, `.gitignore`
+- Create: `~/dev/p5-www-idrac/docs/superpowers/specs/2026-10-04-www-idrac-design.md`, `docs/superpowers/plans/2026-10-04-www-idrac-phase-1.md` (from the hub)
 - Delete (Hub): `docs/superpowers/specs/2026-10-04-www-idrac-design.md`, `docs/superpowers/plans/2026-10-04-www-idrac-phase-1.md`
 
 **Interfaces:**
-- Produces: ein Repo, in dem `prove -lr t` und `dzil test` grün sind, die vier Agenten `www-idrac-*` starten und das Board fünf Karten hat.
+- Produces: a repo in which `prove -lr t` and `dzil test` are green, the four agents `www-idrac-*` start and the board has five cards.
 
-- [ ] **Step 1: Repo und Dist-Gerüst**
+- [ ] **Step 1: Repo and dist scaffold**
 
 ```bash
 mkdir ~/dev/p5-www-idrac && cd ~/dev/p5-www-idrac && git init -b main
 mkdir -p lib/WWW t .github/workflows docs/superpowers/specs docs/superpowers/plans
 ```
 
-`dist.ini` (ohne `irc`-Zeile: für diese Dist gibt es keinen Kanal, und erfunden wird keiner):
+`dist.ini` (without the `irc` line: there is no channel for this dist, and none is invented):
 
 ```ini
 name    = WWW-iDRAC
@@ -232,7 +232,7 @@ This library is free software; you can redistribute it and/or modify it under th
 terms as Perl itself.
 ```
 
-`.gitignore` und `.github/workflows/ci.yml` aus dem Geschwister-Repo, mit dem Namen der Dist; die authentik-eigenen Zeilen (`.env`, der `live`-Job) entfallen:
+`.gitignore` and `.github/workflows/ci.yml` from the sibling repo, with the name of the dist; the authentik-specific lines (`.env`, the `live` job) are dropped:
 
 ```bash
 git -C ~/dev/p5-www-authentik show 3c9b5ac:.gitignore | sed 's/WWW-Authentik/WWW-iDRAC/' > .gitignore
@@ -240,31 +240,31 @@ git -C ~/dev/p5-www-authentik show 3c9b5ac:.github/workflows/ci.yml > .github/wo
 grep -n -i authentik .gitignore .github/workflows/ci.yml
 ```
 
-Expected: `grep` findet nichts.
+Expected: `grep` finds nothing.
 
-- [ ] **Step 2: Lizenz erzeugen und Gerüst prüfen**
+- [ ] **Step 2: Generate the license and check the scaffold**
 
 ```bash
 cd ~/dev/p5-www-idrac && dzil genlicense && git add -A && prove -lr t && dzil test
 ```
 
-Expected: `LICENSE` existiert, `prove` meldet `Result: PASS`, `dzil test` endet mit `all's well`. `[@Author::GETTY]` sammelt über `Git::GatherDir` und sieht nur getrackte Dateien; deshalb das `git add` vor `dzil test`.
+Expected: `LICENSE` exists, `prove` reports `Result: PASS`, `dzil test` ends with `all's well`. `[@Author::GETTY]` gathers via `Git::GatherDir` and sees only tracked files; hence the `git add` before `dzil test`.
 
-- [ ] **Step 3: Agenten-Team**
+- [ ] **Step 3: Agent team**
 
-Skill `getty-agent-team` ausführen, Präfix `www-idrac`, Rollen `worker`, `test-writer`, `release-manager`, `doc-writer`. Vorlage sind die vier Agenten, die Regeln, `settings.json`, `skilletor.json` und `.claude/.gitignore` aus `p5-www-authentik` bei `3c9b5ac`. Was dort authentik-eigen ist, wird ersetzt:
+Run skill `getty-agent-team`, prefix `www-idrac`, roles `worker`, `test-writer`, `release-manager`, `doc-writer`. The template is the four agents, the rules, `settings.json`, `skilletor.json` and `.claude/.gitignore` from `p5-www-authentik` at `3c9b5ac`. What is authentik-specific there is replaced:
 
-| Bei authentik | Hier |
+| In authentik | Here |
 |---|---|
-| „the synchronous Perl client for authentik (OIDC plus the REST API v3)“ | „the synchronous Perl client for Dell iDRAC (inventory, power, sensors and logs over Redfish)“ |
-| Geschwister-Module `WWW::Authentik::OIDC` ↔ `::Admin` | `WWW::iDRAC::Redfish` ↔ die Fähigkeits-Klassen |
-| öffentliche API `WWW::Authentik`, `::OIDC`, `::Admin` | `WWW::iDRAC`, `::Redfish`, `::System`, `::Power`, `::Sensors`, `::Logs`, `::Manager`, `::Capabilities` |
-| Absätze zum Zwilling `p5-net-async-authentik` | entfallen; der Zwilling `Net::Async::iDRAC` existiert noch nicht. Ein Satz bleibt: Übersetzung und I/O getrennt halten, weil er kommt. |
-| „Live tests hit a real Authentik. Opt-in via `AUTHENTIK_LIVE_TEST=1 AUTHENTIK_URL=…`“ | „Live tests hit a real server's management controller. Opt-in via `IDRAC_HOST`, `IDRAC_USERNAME`, `IDRAC_PASSWORD`; read-only. `IDRAC_LIVE_DESTRUCTIVE=1` switches the machine off and is never set by an agent.“ |
-| Verweis auf Testmuster `t/60-oidc.t`, `t/50-admin.t` in `p5-www-keycloak` | Verweis auf `t/lib/FakeiDRAC.pm` und `t/lib/iDRACShapes.pm` |
+| "the synchronous Perl client for authentik (OIDC plus the REST API v3)" | "the synchronous Perl client for Dell iDRAC (inventory, power, sensors and logs over Redfish)" |
+| sibling modules `WWW::Authentik::OIDC` ↔ `::Admin` | `WWW::iDRAC::Redfish` ↔ the capability classes |
+| public API `WWW::Authentik`, `::OIDC`, `::Admin` | `WWW::iDRAC`, `::Redfish`, `::System`, `::Power`, `::Sensors`, `::Logs`, `::Manager`, `::Capabilities` |
+| paragraphs about the twin `p5-net-async-authentik` | dropped; the twin `Net::Async::iDRAC` does not exist yet. One sentence stays: keep translation and I/O separate, because it is coming. |
+| "Live tests hit a real Authentik. Opt-in via `AUTHENTIK_LIVE_TEST=1 AUTHENTIK_URL=…`" | "Live tests hit a real server's management controller. Opt-in via `IDRAC_HOST`, `IDRAC_USERNAME`, `IDRAC_PASSWORD`; read-only. `IDRAC_LIVE_DESTRUCTIVE=1` switches the machine off and is never set by an agent." |
+| reference to the test patterns `t/60-oidc.t`, `t/50-admin.t` in `p5-www-keycloak` | reference to `t/lib/FakeiDRAC.pm` and `t/lib/iDRACShapes.pm` |
 | `briefing.skills: www-authentik-core` | `www-idrac-core` |
 
-In die Regeln kommt zusätzlich, unter „Coordination“: „Fixtures are public. Nothing recorded from a real controller is committed before it went through `iDRACSanitize` and a person has read it.“
+In addition, under "Coordination", the rules get: "Fixtures are public. Nothing recorded from a real controller is committed before it went through `iDRACSanitize` and a person has read it."
 
 `.claude/skills/www-idrac-core/SKILL.md`:
 
@@ -326,7 +326,7 @@ only reads; `IDRAC_LIVE_DESTRUCTIVE=1` switches a real machine and is never set 
 agent.
 ```
 
-Die übrigen Skills kommen wie beim Geschwister über skilletor (`.claude/skilletor.json` unverändert übernehmen), danach:
+The remaining skills come via skilletor as in the sibling (take over `.claude/skilletor.json` unchanged), then:
 
 ```bash
 cd ~/dev/p5-www-idrac && skilletor sync && skilletor check; echo "check rc=$?"
@@ -334,11 +334,11 @@ grep -rn -i 'authentik\|keycloak\|oidc' .claude/agents .claude/rules .claude/set
 for a in .claude/agents/*.md; do sed -n '/^briefing:/,/^---/p' "$a" | grep -E '^\s+- ' | sed 's/.*- //' | while read s; do ls .claude/skills/$s/SKILL.md ~/.claude/skills/$s/SKILL.md 2>/dev/null | head -1 | grep -q . || echo "MISSING in $a: $s"; done; done
 ```
 
-Expected: `grep` findet höchstens den Verweis auf `~/dev/p5-www-keycloak` als Strukturvorbild; keine `MISSING`-Zeile. `skilletor check` darf mit rc=1 enden, wenn es nur Hinweise meldet; maßgeblich ist, dass jeder gebriefte Skill auflösbar ist.
+Expected: `grep` finds at most the reference to `~/dev/p5-www-keycloak` as the structural model; no `MISSING` line. `skilletor check` may end with rc=1 if it reports only hints; what matters is that every briefed skill resolves.
 
 - [ ] **Step 4: `CLAUDE.md`**
 
-Der Einstieg im Gerüst-Zustand; Aufgabe 13 ersetzt ihn durch die endgültige Fassung.
+The entry point in the scaffold state; task 13 replaces it with the final version.
 
 ````markdown
 # CLAUDE.md
@@ -378,7 +378,7 @@ dzil test            # test via Dist::Zilla
 `git add LICENSE` after changing license, holder or year in `dist.ini`.
 ````
 
-- [ ] **Step 5: Spec und Plan in die Dist holen**
+- [ ] **Step 5: Bring spec and plan into the dist**
 
 ```bash
 cd ~/dev/p5-www-idrac
@@ -386,15 +386,15 @@ cp ~/dev/perl-developer/docs/superpowers/specs/2026-10-04-www-idrac-design.md do
 cp ~/dev/perl-developer/docs/superpowers/plans/2026-10-04-www-idrac-phase-1.md docs/superpowers/plans/
 ```
 
-In der Spec die Zeile `Status:` ersetzen durch `Status: freigegeben am 2026-10-04. Abschnitt 9 nennt, was erst am Gerät entschieden wird.` und Abschnitt 11 (Anlage) streichen; er ist mit dieser Aufgabe erledigt.
+In the spec replace the `Status:` line with `Status: approved on 2026-10-04. Section 9 names what is decided only on the device.` and delete section 11 (setup); it is done with this task.
 
-- [ ] **Step 6: Erster Commit der Dist**
+- [ ] **Step 6: First commit of the dist**
 
 ```bash
 cd ~/dev/p5-www-idrac && git add -A && git status --short && git commit -m "Add distribution skeleton and agent team"
 ```
 
-Expected: Der Commit enthält keine Datei unter `tasks/`, kein `.karr`-Verzeichnis und keine `settings.local.json`.
+Expected: the commit contains no file under `tasks/`, no `.karr` directory and no `settings.local.json`.
 
 - [ ] **Step 7: Board**
 
@@ -413,22 +413,22 @@ karr create --local-only --priority low --status backlog --title "Phase 3: iDRAC
 karr list
 ```
 
-Expected: fünf Karten mit den IDs 1 bis 5, in dieser Reihenfolge. Die IDs nach dem Anlegen gegen `karr list` prüfen: `karr create` hat schon einmal still eine Karte überschrieben, als der Zähler nicht stimmte.
+Expected: five cards with the IDs 1 to 5, in this order. Check the IDs against `karr list` after creating: `karr create` has silently overwritten a card once before, when the counter was off.
 
-- [ ] **Step 8: Hub nachziehen**
+- [ ] **Step 8: Update the hub**
 
 ```bash
 cd ~/dev/perl-developer
 git rm -q docs/superpowers/specs/2026-10-04-www-idrac-design.md docs/superpowers/plans/2026-10-04-www-idrac-phase-1.md
-git commit -q -m "docs: WWW::iDRAC — Spec und Plan sind in die Dist p5-www-idrac umgezogen"
+git commit -q -m "docs: WWW::iDRAC — spec and plan moved into the dist p5-www-idrac"
 bin/fleet scan && bin/fleet --json repo p5-www-idrac | head -30
 ```
 
-Expected: `fleet` kennt `p5-www-idrac` mit `dist_name` `WWW-iDRAC`, `status` `private`, `has_board` wahr und fünf Karten. `fleet.yml` braucht keinen Eintrag: Die Dist bleibt `standalone` und erbt `private`/`ours` aus den Voreinstellungen. Nur diese zwei Dateien committen; im Hub liegen fremde, nicht committete Änderungen.
+Expected: `fleet` knows `p5-www-idrac` with `dist_name` `WWW-iDRAC`, `status` `private`, `has_board` true and five cards. `fleet.yml` needs no entry: the dist stays `standalone` and inherits `private`/`ours` from the defaults. Commit only these two files; the hub has foreign, uncommitted changes.
 
 ---
 
-### Task 2: Fehlerklassen und HTTP-Rolle
+### Task 2: Error classes and HTTP role
 
 **Files:**
 - Create: `lib/WWW/iDRAC/Error.pm`, `lib/WWW/iDRAC/Error/Validation.pm`, `lib/WWW/iDRAC/Error/Network.pm`, `lib/WWW/iDRAC/Error/API.pm`, `lib/WWW/iDRAC/Error/Unsupported.pm`
@@ -437,12 +437,12 @@ Expected: `fleet` kennt `p5-www-idrac` mit `dist_name` `WWW-iDRAC`, `status` `pr
 - Modify: `t/00-load.t`
 
 **Interfaces:**
-- Produces: `WWW::iDRAC::Error->throw( message => ... )`; alle Fehler stringifizieren zu `message`.
-- Produces: `WWW::iDRAC::Error::API` mit `http_status` (Pflicht), `message_id`, `api_message`, `resolution`, `is_not_found`, `is_unauthorized`.
-- Produces: `WWW::iDRAC::Error::Unsupported` mit `capability` (Pflicht), `reason`.
-- Produces: Rolle `WWW::iDRAC::Role::HTTP`, verlangt `ua`. `build_request( $method, $url, json => \%body, token => $token, basic => [ $user, $password ] )` → `HTTP::Request`; `read_response( $response, $method, $url )` → `{ status, data, location, token }` oder wirft `api_error_class`; `send_request( $method, $url, %arg )` → dasselbe, wirft `network_error_class`, wenn keine Antwort kam; `extended_info( $data )` → `{ message_id, message, resolution }`.
+- Produces: `WWW::iDRAC::Error->throw( message => ... )`; all errors stringify to `message`.
+- Produces: `WWW::iDRAC::Error::API` with `http_status` (required), `message_id`, `api_message`, `resolution`, `is_not_found`, `is_unauthorized`.
+- Produces: `WWW::iDRAC::Error::Unsupported` with `capability` (required), `reason`.
+- Produces: role `WWW::iDRAC::Role::HTTP`, requires `ua`. `build_request( $method, $url, json => \%body, token => $token, basic => [ $user, $password ] )` → `HTTP::Request`; `read_response( $response, $method, $url )` → `{ status, data, location, token }` or throws `api_error_class`; `send_request( $method, $url, %arg )` → the same, throws `network_error_class` if no response came; `extended_info( $data )` → `{ message_id, message, resolution }`.
 
-- [ ] **Step 1: Die Tests schreiben**
+- [ ] **Step 1: Write the tests**
 
 `t/10-errors.t`:
 
@@ -577,12 +577,12 @@ subtest 'no answer at all' => sub {
 done_testing;
 ```
 
-- [ ] **Step 2: Laufen lassen und scheitern sehen**
+- [ ] **Step 2: Run and watch them fail**
 
 Run: `prove -l t/10-errors.t t/20-http.t`
-Expected: FAIL, `Can't locate WWW/iDRAC/Error.pm in @INC` und `Can't locate WWW/iDRAC/Role/HTTP.pm`.
+Expected: FAIL, `Can't locate WWW/iDRAC/Error.pm in @INC` and `Can't locate WWW/iDRAC/Role/HTTP.pm`.
 
-- [ ] **Step 3: Die Fehlerklassen**
+- [ ] **Step 3: The error classes**
 
 `lib/WWW/iDRAC/Error.pm`:
 
@@ -789,7 +789,7 @@ What exactly is missing.
 1;
 ```
 
-- [ ] **Step 4: Die HTTP-Rolle**
+- [ ] **Step 4: The HTTP role**
 
 `lib/WWW/iDRAC/Role/HTTP.pm`:
 
@@ -940,9 +940,9 @@ error status. Neither message contains the password.
 1;
 ```
 
-Zugangsdaten sind Zeichen, nicht Bytes: Für Basic werden sie immer als UTF-8 kodiert, so wie der JSON-Codec es beim Session-Login mit dem Passwort tut. Sonst hinge es von der Anmeldeart ab, ob ein Passwort mit Umlaut funktioniert.
+Credentials are characters, not bytes: for Basic they are always encoded as UTF-8, just as the JSON codec does with the password at session login. Otherwise whether a password with an umlaut works would depend on the login method.
 
-- [ ] **Step 5: `t/00-load.t` ergänzen**
+- [ ] **Step 5: Extend `t/00-load.t`**
 
 `t/00-load.t`:
 
@@ -967,18 +967,18 @@ for (qw(
 done_testing;
 ```
 
-- [ ] **Step 6: Laufen lassen**
+- [ ] **Step 6: Run**
 
 Run: `prove -lr t`
-Expected: PASS, 3 Dateien.
+Expected: PASS, 3 files.
 
-- [ ] **Step 7: Übergabe**
+- [ ] **Step 7: Handover**
 
-Commit-fertiger Baum an `www-idrac-release-manager`. Vorschlag: `Add the error classes and the HTTP role`.
+Commit-ready tree to `www-idrac-release-manager`. Suggestion: `Add the error classes and the HTTP role`.
 
 ---
 
-### Task 3: Nachgebauter iDRAC und Redfish-Transport
+### Task 3: Emulated iDRAC and Redfish transport
 
 **Files:**
 - Create: `lib/WWW/iDRAC/Redfish.pm`
@@ -987,17 +987,17 @@ Commit-fertiger Baum an `www-idrac-release-manager`. Vorschlag: `Add the error c
 - Modify: `t/00-load.t`
 
 **Interfaces:**
-- Consumes: `WWW::iDRAC::Role::HTTP`, `WWW::iDRAC::Error::API`, `WWW::iDRAC::Error::Validation` (Aufgabe 2).
+- Consumes: `WWW::iDRAC::Role::HTTP`, `WWW::iDRAC::Error::API`, `WWW::iDRAC::Error::Validation` (task 2).
 - Produces: `WWW::iDRAC::Redfish->new( base_url => 'https://host', username =>, password =>, ua =>, session => 1 )`.
-- Produces: `get($path)`, `post( $path, \%body )`, `patch( $path, \%body )`, `delete($path)` → dekodiertes Dokument oder `undef`; `request( $method, $path, json => \%body )` → `{ status, data, location, token }`.
-- Produces: `members( $path, limit => $n )` → Liste von Dokumenten in der Reihenfolge des Controllers.
-- Produces: `locate($kind)` mit `$kind` aus `Systems`, `Chassis`, `Managers` → Pfad oder `undef`, gemerkt.
-- Produces: `root` → Service-Root; `login`, `logout` → 1 wenn eine Session beendet wurde, sonst 0; `forget_session`; `url($path)`; `path_of($address)`.
-- Produces: `FakeiDRAC->new( docs => \%docs, delay => $n )`, `FakeiDRAC->from_file($file)`, `->host`, `->requests`, `->sessions`, `->doc($path)`, `->remove($path)`, `->forget_tokens`, `->seen($regex)` → Liste von `"METHOD path"`, `->default_docs`. Anmeldung `root` / `calvin`.
+- Produces: `get($path)`, `post( $path, \%body )`, `patch( $path, \%body )`, `delete($path)` → decoded document or `undef`; `request( $method, $path, json => \%body )` → `{ status, data, location, token }`.
+- Produces: `members( $path, limit => $n )` → list of documents in the controller's order.
+- Produces: `locate($kind)` with `$kind` from `Systems`, `Chassis`, `Managers` → path or `undef`, remembered.
+- Produces: `root` → service root; `login`, `logout` → 1 if a session was ended, otherwise 0; `forget_session`; `url($path)`; `path_of($address)`.
+- Produces: `FakeiDRAC->new( docs => \%docs, delay => $n )`, `FakeiDRAC->from_file($file)`, `->host`, `->requests`, `->sessions`, `->doc($path)`, `->remove($path)`, `->forget_tokens`, `->seen($regex)` → list of `"METHOD path"`, `->default_docs`. Login `root` / `calvin`.
 
-- [ ] **Step 1: Den nachgebauten iDRAC schreiben**
+- [ ] **Step 1: Write the emulated iDRAC**
 
-`t/lib/FakeiDRAC.pm`. Die Standard-Dokumente haben die Form eines 13G-Servers mit erfundenen Werten; sie sind keine Aufnahme. Absichtlich enthalten: eine Chassis-Collection, deren erster Eintrag nicht das Chassis des Systems ist; ein Sensor ohne Messwert; ein Log mit ganzen Einträgen in falscher Reihenfolge und eines mit Verweisen und zweiter Seite; kein `PowerCycle` in den erlaubten Reset-Typen; keine Memory-Collection.
+`t/lib/FakeiDRAC.pm`. The default documents have the shape of a 13G server with invented values; they are not a recording. Deliberately included: a chassis collection whose first entry is not the system's chassis; a sensor without a reading; one log with whole entries in the wrong order and one with references and a second page; no `PowerCycle` in the allowed reset types; no memory collection.
 
 ```perl
 package FakeiDRAC;
@@ -1372,7 +1372,7 @@ sub default_docs {
 1;
 ```
 
-- [ ] **Step 2: Den Test schreiben**
+- [ ] **Step 2: Write the test**
 
 `t/30-redfish.t`:
 
@@ -1547,12 +1547,12 @@ subtest 'something that is not Redfish' => sub {
 done_testing;
 ```
 
-- [ ] **Step 3: Laufen lassen und scheitern sehen**
+- [ ] **Step 3: Run and watch it fail**
 
 Run: `prove -l t/30-redfish.t`
 Expected: FAIL, `Can't locate WWW/iDRAC/Redfish.pm in @INC`.
 
-- [ ] **Step 4: Den Transport schreiben**
+- [ ] **Step 4: Write the transport**
 
 `lib/WWW/iDRAC/Redfish.pm`:
 
@@ -1888,9 +1888,9 @@ states are never remembered.
 1;
 ```
 
-`DEMOLISH` beendet die Session auch beim Programmende und lässt `$@` und `$?` unberührt; im Prototyp nach `exit` und nach `die` geprüft.
+`DEMOLISH` also ends the session at program end and leaves `$@` and `$?` untouched; checked in the prototype after `exit` and after `die`.
 
-- [ ] **Step 5: `t/00-load.t` ergänzen**
+- [ ] **Step 5: Extend `t/00-load.t`**
 
 `t/00-load.t`:
 
@@ -1916,30 +1916,30 @@ for (qw(
 done_testing;
 ```
 
-- [ ] **Step 6: Laufen lassen**
+- [ ] **Step 6: Run**
 
 Run: `prove -lr t`
-Expected: PASS, 4 Dateien.
+Expected: PASS, 4 files.
 
-- [ ] **Step 7: Übergabe**
+- [ ] **Step 7: Handover**
 
-Vorschlag: `Add the Redfish transport and the fake controller for the unit tests`.
+Suggestion: `Add the Redfish transport and the fake controller for the unit tests`.
 
 ---
 
-### Task 4: Bereinigung und Recorder
+### Task 4: Sanitizer and recorder
 
 **Files:**
 - Create: `t/lib/iDRACSanitize.pm`, `t/lib/iDRACRecorder.pm`, `t/idrac/record.pl`
 - Test: `t/35-sanitize.t`, `t/36-recorder.t`
 
 **Interfaces:**
-- Consumes: `WWW::iDRAC::Redfish` (`get`, `root`, `logout`), `FakeiDRAC` (Aufgabe 3).
-- Produces: `iDRACSanitize->new->hide( $kind => $value )->sanitize( \%docs )` → bereinigte Kopie der Abbildung Pfad → Dokument; `iDRACSanitize->leaks( \%docs, @values )` → die Werte, die noch darin stehen.
-- Produces: `iDRACRecorder->new( redfish => $redfish, max_docs => 500, max_members => 20 )->record` → Abbildung Pfad → Dokument; `->skipped`, `->failed`.
-- Produces: `t/idrac/record.pl <name>` schreibt `t/fixtures/<name>/redfish.json` und druckt, was Spec-Abschnitt 9 wissen will.
+- Consumes: `WWW::iDRAC::Redfish` (`get`, `root`, `logout`), `FakeiDRAC` (task 3).
+- Produces: `iDRACSanitize->new->hide( $kind => $value )->sanitize( \%docs )` → sanitized copy of the mapping path → document; `iDRACSanitize->leaks( \%docs, @values )` → the values still in it.
+- Produces: `iDRACRecorder->new( redfish => $redfish, max_docs => 500, max_members => 20 )->record` → mapping path → document; `->skipped`, `->failed`.
+- Produces: `t/idrac/record.pl <name>` writes `t/fixtures/<name>/redfish.json` and prints what spec section 9 wants to know.
 
-- [ ] **Step 1: Die Tests schreiben**
+- [ ] **Step 1: Write the tests**
 
 `t/35-sanitize.t`:
 
@@ -2100,14 +2100,14 @@ subtest 'limits' => sub {
 done_testing;
 ```
 
-- [ ] **Step 2: Laufen lassen und scheitern sehen**
+- [ ] **Step 2: Run and watch them fail**
 
 Run: `prove -l t/35-sanitize.t t/36-recorder.t`
-Expected: FAIL, `Can't locate iDRACSanitize.pm in @INC` und `Can't locate iDRACRecorder.pm`.
+Expected: FAIL, `Can't locate iDRACSanitize.pm in @INC` and `Can't locate iDRACRecorder.pm`.
 
-- [ ] **Step 3: Die Bereinigung schreiben**
+- [ ] **Step 3: Write the sanitizer**
 
-`t/lib/iDRACSanitize.pm`. Zwei Fallen, die der Prototyp gefunden hat und die niemand „vereinfachen“ darf: Eine Firmware-Version hat die Form einer IPv4-Adresse und bleibt unter ihrem eigenen Schlüssel unangetastet; und eine Adresse am Satzende, gefolgt von einem Punkt, muss trotzdem erkannt werden.
+`t/lib/iDRACSanitize.pm`. Two traps the prototype found and that nobody may "simplify": a firmware version has the shape of an IPv4 address and stays untouched under its own key; and an address at the end of a sentence, followed by a period, must still be recognized.
 
 ```perl
 package iDRACSanitize;
@@ -2253,7 +2253,7 @@ sub leaks {
 1;
 ```
 
-- [ ] **Step 4: Den Recorder schreiben**
+- [ ] **Step 4: Write the recorder**
 
 `t/lib/iDRACRecorder.pm`:
 
@@ -2415,32 +2415,32 @@ $say->( 'failed', join ' ', map { $_.' ('.( $recorder->failed->{$_} =~ /failed: 
 print "\nRead $dir/redfish.json before it is committed: it must not name your machine, your network or a person.\n";
 ```
 
-- [ ] **Step 5: Laufen lassen**
+- [ ] **Step 5: Run**
 
 Run: `prove -lr t && perl -Ilib -It/lib -c t/idrac/record.pl`
-Expected: PASS, 6 Dateien; `t/idrac/record.pl syntax OK`.
+Expected: PASS, 6 files; `t/idrac/record.pl syntax OK`.
 
-- [ ] **Step 6: Übergabe**
+- [ ] **Step 6: Handover**
 
-Vorschlag: `Add the recorder for fixtures and the sanitizer they go through`.
+Suggestion: `Add the recorder for fixtures and the sanitizer they go through`.
 
 ---
 
-### Task 5: Am Gerät — beide iDRACs aufnehmen (Karte 1)
+### Task 5: On the device — record both iDRACs (card 1)
 
-Der einzige Schritt dieses Plans, der echte Hardware berührt, und er liest nur. Er braucht Getty.
+The only step of this plan that touches real hardware, and it only reads. It needs Getty.
 
 **Files:**
 - Create: `t/fixtures/idrac8/redfish.json` (PowerEdge T330), `t/fixtures/idrac7/redfish.json` (PowerEdge R720xd)
-- Modify: `docs/superpowers/specs/2026-10-04-www-idrac-design.md` (Abschnitt 9)
+- Modify: `docs/superpowers/specs/2026-10-04-www-idrac-design.md` (section 9)
 
 **Interfaces:**
-- Consumes: `t/idrac/record.pl` (Aufgabe 4).
-- Produces: zwei Aufnahmen, die `FakeiDRAC->from_file` ausliefert, und die Antworten auf Spec-Abschnitt 9.
+- Consumes: `t/idrac/record.pl` (task 4).
+- Produces: two recordings that `FakeiDRAC->from_file` serves, and the answers to spec section 9.
 
-- [ ] **Step 1: Zugang von Getty**
+- [ ] **Step 1: Access from Getty**
 
-Getty nennt die beiden Adressen und legt je Gerät eine Datei an, die nur er lesen kann. Zugangsdaten stehen nie im Chat, in einem Befehl oder im Repo.
+Getty names the two addresses and creates one file per device that only he can read. Credentials never appear in the chat, in a command or in the repo.
 
 ```bash
 mkdir -p ~/.config/idrac && chmod 700 ~/.config/idrac
@@ -2449,12 +2449,12 @@ IDRAC_HOST='<Adresse des iDRAC im T330>'
 IDRAC_USERNAME='<Benutzer>'
 IDRAC_PASSWORD='<Passwort>'
 ENV
-chmod 600 ~/.config/idrac/t330.env      # dasselbe für r720xd.env
+chmod 600 ~/.config/idrac/t330.env      # the same for r720xd.env
 ```
 
-- [ ] **Step 2: Erreichbarkeit, TLS und Redfish prüfen**
+- [ ] **Step 2: Check reachability, TLS and Redfish**
 
-Für jedes Gerät (`t330`, `r720xd`):
+For each device (`t330`, `r720xd`):
 
 ```bash
 set -a; . ~/.config/idrac/t330.env; set +a
@@ -2462,22 +2462,22 @@ openssl s_client -connect "$IDRAC_HOST:443" </dev/null 2>/dev/null | grep -E '^ 
 curl -sk -o /dev/null -w '%{http_code}\n' "https://$IDRAC_HOST/redfish/v1/"
 ```
 
-Expected: eine Protokollzeile mit `TLSv1.2` oder neuer und HTTP `200`.
+Expected: a protocol line with `TLSv1.2` or newer and HTTP `200`.
 
-Halt und Meldung an Getty, ohne weiterzumachen, wenn:
-- `openssl` keine Verbindung bekommt oder nur `TLSv1`/`TLSv1.1` anbietet: Der Controller braucht neuere Firmware. Die Dist bekommt keinen unsicheren Standard.
-- `curl` `404` meldet: Die Firmware kennt kein Redfish. Auch hier ist das Firmware-Update Voraussetzung und Handarbeit.
+Stop and report to Getty, without continuing, if:
+- `openssl` gets no connection or offers only `TLSv1`/`TLSv1.1`: the controller needs newer firmware. The dist gets no insecure default.
+- `curl` reports `404`: the firmware does not know Redfish. Here too the firmware update is a prerequisite and manual work.
 
-- [ ] **Step 3: Fingerprint holen**
+- [ ] **Step 3: Fetch the fingerprint**
 
 ```bash
 FP=$(openssl s_client -connect "$IDRAC_HOST:443" </dev/null 2>/dev/null | openssl x509 -noout -fingerprint -sha256 | sed 's/.*=//; s/://g' | tr A-F a-f)
 echo "IDRAC_SSL_FINGERPRINT='sha256\$$FP'" >> ~/.config/idrac/t330.env
 ```
 
-Die Werte stehen in einfachen Anführungszeichen, hier wie in Step 1: Die Datei wird mit `.` eingelesen, und ohne sie frisst die Shell das `$` des Fingerprints und jedes Sonderzeichen im Passwort.
+The values are in single quotes, here as in step 1: the file is read with `.`, and without them the shell eats the `$` of the fingerprint and every special character in the password.
 
-- [ ] **Step 4: Aufnehmen**
+- [ ] **Step 4: Record**
 
 ```bash
 cd ~/dev/p5-www-idrac
@@ -2485,11 +2485,11 @@ cd ~/dev/p5-www-idrac
 ( set -a; . ~/.config/idrac/r720xd.env; set +a; perl -Ilib -It/lib t/idrac/record.pl idrac7 ) | tee /tmp/idrac7-summary.txt
 ```
 
-Expected: je eine Zusammenfassung mit Zeilen für `fixture`, `TLS`, `Redfish version`, `server model`, `manager model`, `firmware`, `reset types`, `session collection`, `session timeout`, `sessions open`, `log services`, `license documents`, `not walked`, `failed`. Der Lauf dauert auf einem alten iDRAC einige Minuten.
+Expected: one summary each with lines for `fixture`, `TLS`, `Redfish version`, `server model`, `manager model`, `firmware`, `reset types`, `session collection`, `session timeout`, `sessions open`, `log services`, `license documents`, `not walked`, `failed`. The run takes a few minutes on an old iDRAC.
 
-Bricht der Lauf mit einem Verbindungsfehler mitten im Baum ab, liegt es möglicherweise an Keep-Alive. Dann in `t/idrac/record.pl` `keep_alive => 1` entfernen, noch einmal aufnehmen und den Befund in Spec-Abschnitt 9 festhalten; in dem Fall entfällt `keep_alive` auch in `WWW::iDRAC::_build_ua` (Aufgabe 6).
+If the run aborts with a connection error in the middle of the tree, keep-alive may be the cause. Then remove `keep_alive => 1` in `t/idrac/record.pl`, record again and note the finding in spec section 9; in that case `keep_alive` is also dropped in `WWW::iDRAC::_build_ua` (task 6).
 
-- [ ] **Step 5: Die Aufnahmen lassen sich ausliefern**
+- [ ] **Step 5: The recordings can be served**
 
 ```bash
 for n in idrac7 idrac8; do perl -Ilib -It/lib -MFakeiDRAC -MWWW::iDRAC::Redfish -e '
@@ -2499,65 +2499,65 @@ for n in idrac7 idrac8; do perl -Ilib -It/lib -MFakeiDRAC -MWWW::iDRAC::Redfish 
 ' $n; done
 ```
 
-Expected: für beide je drei Pfade.
+Expected: three paths for each.
 
-- [ ] **Step 6: Getty liest die Aufnahmen**
+- [ ] **Step 6: Getty reads the recordings**
 
-Die beiden Dateien `t/fixtures/idrac*/redfish.json` gehen an Getty zur Durchsicht, mit dieser Prüfung als Hilfe:
+The two files `t/fixtures/idrac*/redfish.json` go to Getty for review, with this check as an aid:
 
 ```bash
 grep -n -iE 'cihq|\.lan|\.local|192\.168\.|10\.[0-9]+\.[0-9]+\.[0-9]+|172\.(1[6-9]|2[0-9]|3[01])\.' t/fixtures/idrac*/redfish.json | head -40
 ```
 
-Expected: keine Treffer. Erst mit Gettys Ja gehen die Dateien in die Übergabe. Findet sich etwas, wird der Schlüssel oder das Muster in `t/lib/iDRACSanitize.pm` ergänzt, mit einem Test in `t/35-sanitize.t`, und neu aufgenommen.
+Expected: no hits. Only with Getty's yes do the files go into the handover. If something turns up, the key or the pattern is added to `t/lib/iDRACSanitize.pm`, with a test in `t/35-sanitize.t`, and recorded again.
 
-- [ ] **Step 7: Spec-Abschnitt 9 beantworten**
+- [ ] **Step 7: Answer spec section 9**
 
-Die Tabelle in Abschnitt 9 bekommt eine dritte Spalte „Gemessen (T330 / R720xd)“. Woher jede Antwort kommt:
+The table in section 9 gets a third column "Measured (T330 / R720xd)". Where each answer comes from:
 
-| Frage in Abschnitt 9 | Quelle |
+| Question in section 9 | Source |
 |---|---|
-| Firmware-Stand; Redfish vorhanden? | Zeilen `firmware`, `Redfish version`, `manager model` |
-| TLS-Versionen und Cipher | Zeile `TLS` und die Ausgabe von `openssl` aus Step 2 |
-| Lizenzstufe über Redfish lesbar? | Zeile `license documents`; leer heißt nein |
-| Wie viele Sessions, wie lange? | Zeilen `session timeout`, `sessions open`, `session collection` |
-| Wo liegen SEL und Lifecycle-Log, inline oder einzeln? | Zeile `log services`; in der Aufnahme das Dokument, auf das `Entries` zeigt: haben seine `Members` mehr als `@odata.id`, sind sie inline |
-| Welche Schlüssel liefert iDRAC 7/8 tatsächlich? | beantwortet Aufgabe 12 mit `t/85-fixtures.t`; hier nur die Zeile `reset types` eintragen |
-| WS-Man oder racadm? | bleibt offen bis Phase 2; hier notieren, was die Zeile `failed` und die fehlenden Ressourcen über die Lücken sagen |
+| Firmware level; Redfish present? | lines `firmware`, `Redfish version`, `manager model` |
+| TLS versions and ciphers | line `TLS` and the `openssl` output from step 2 |
+| License tier readable via Redfish? | line `license documents`; empty means no |
+| How many sessions, how long? | lines `session timeout`, `sessions open`, `session collection` |
+| Where are SEL and lifecycle log, inline or individually? | line `log services`; in the recording the document `Entries` points to: if its `Members` have more than `@odata.id`, they are inline |
+| Which keys do iDRAC 7/8 actually deliver? | answered by task 12 with `t/85-fixtures.t`; here only enter the `reset types` line |
+| WS-Man or racadm? | stays open until phase 2; note here what the `failed` line and the missing resources say about the gaps |
 
-- [ ] **Step 8: Folgekarten**
+- [ ] **Step 8: Follow-up cards**
 
-Je Befund eine Notiz auf Karte 1; der Hauptagent legt daraus Karten an:
-- `license documents` nicht leer → Karte „Read the license level over Redfish“ (Backlog).
-- `reset types` ohne `GracefulShutdown` → Notiz: `power->off` ist auf diesem Controller `Unsupported`; ob `PushPowerButton` als Ersatz dienen soll, entscheidet Getty.
-- Modell des Managers nicht in der Form `13G …`/`12G …` → Notiz für Aufgabe 11: `generation_from` erkennt diesen Controller nicht.
+One note per finding on card 1; the main agent creates cards from them:
+- `license documents` not empty → card "Read the license level over Redfish" (backlog).
+- `reset types` without `GracefulShutdown` → note: `power->off` is `Unsupported` on this controller; whether `PushPowerButton` should serve as a substitute is Getty's decision.
+- Manager model not in the form `13G …`/`12G …` → note for task 11: `generation_from` does not recognize this controller.
 
-- [ ] **Step 9: Übergabe**
+- [ ] **Step 9: Handover**
 
-Vorschlag: `Record iDRAC 7 and 8, and write down what they answered`. Die Dateien unter `~/.config/idrac/` und `/tmp/idrac*-summary.txt` gehören nicht ins Repo.
+Suggestion: `Record iDRAC 7 and 8, and write down what they answered`. The files under `~/.config/idrac/` and `/tmp/idrac*-summary.txt` do not belong in the repo.
 
 ---
 
-### Task 6: Util, Fähigkeits-Rolle, System und die Fassade
+### Task 6: Util, capability role, System and the facade
 
 **Files:**
 - Create: `lib/WWW/iDRAC/Util.pm`, `lib/WWW/iDRAC/Role/Capability.pm`, `lib/WWW/iDRAC/System.pm`
-- Modify: `lib/WWW/iDRAC.pm` (ganz ersetzen)
+- Modify: `lib/WWW/iDRAC.pm` (replace entirely)
 - Create: `t/lib/iDRACShapes.pm`
 - Test: `t/15-util.t`, `t/40-facade.t`, `t/50-system.t`
 - Modify: `t/00-load.t`
 
 **Interfaces:**
 - Consumes: `WWW::iDRAC::Redfish` (`get`, `members`, `locate`, `logout`), `WWW::iDRAC::Error::*`, `FakeiDRAC`.
-- Produces: `WWW::iDRAC::Util` exportiert auf Wunsch `text($v)`, `number($v)`, `health_of($status)`, `state_of($v)`, `list_of($v)`.
-- Produces: Rolle `WWW::iDRAC::Role::Capability`, verlangt `area`; Attribut `redfish` (Pflicht); `unsupported( $method, $reason )` wirft; `fetch( $path, $method )`; `fetch_members( $path, $method, limit => $n )`; `resource( $kind, $method )` → Dokument von System, Chassis oder Manager; `linked_path( $doc, $key, $method )` → Pfad; `supports($method)` → 1/0 über `probe_<method>`.
-- Produces: `WWW::iDRAC::System` mit `info`, `processors`, `memory`, `nics` und den reinen Funktionen `info_from`, `processor_from`, `memory_from`, `nic_from`.
-- Produces: `WWW::iDRAC->new( host =>, username =>, password =>, session => 1, verify_ssl => 1, ssl_ca_file =>, ssl_fingerprint =>, ssl_opts => {}, timeout => 60, ua => )` mit `base_url`, `ua`, `redfish`, `system`, `logout`.
-- Produces: `iDRACShapes` exportiert `shape_ok( $got, 'area.method' )` und `read_methods()`.
+- Produces: `WWW::iDRAC::Util` exports on request `text($v)`, `number($v)`, `health_of($status)`, `state_of($v)`, `list_of($v)`.
+- Produces: role `WWW::iDRAC::Role::Capability`, requires `area`; attribute `redfish` (required); `unsupported( $method, $reason )` throws; `fetch( $path, $method )`; `fetch_members( $path, $method, limit => $n )`; `resource( $kind, $method )` → document of system, chassis or manager; `linked_path( $doc, $key, $method )` → path; `supports($method)` → 1/0 via `probe_<method>`.
+- Produces: `WWW::iDRAC::System` with `info`, `processors`, `memory`, `nics` and the pure functions `info_from`, `processor_from`, `memory_from`, `nic_from`.
+- Produces: `WWW::iDRAC->new( host =>, username =>, password =>, session => 1, verify_ssl => 1, ssl_ca_file =>, ssl_fingerprint =>, ssl_opts => {}, timeout => 60, ua => )` with `base_url`, `ua`, `redfish`, `system`, `logout`.
+- Produces: `iDRACShapes` exports `shape_ok( $got, 'area.method' )` and `read_methods()`.
 
-- [ ] **Step 1: Die Schlüssel-Tabelle und die Tests schreiben**
+- [ ] **Step 1: Write the key table and the tests**
 
-`t/lib/iDRACShapes.pm` enthält schon die Schlüssel aller Fähigkeiten; die späteren Aufgaben benutzen sie.
+`t/lib/iDRACShapes.pm` already contains the keys of all capabilities; the later tasks use them.
 
 ```perl
 package iDRACShapes;
@@ -2851,12 +2851,12 @@ is_deeply( \@warnings, [], 'no warnings' );
 done_testing;
 ```
 
-- [ ] **Step 2: Laufen lassen und scheitern sehen**
+- [ ] **Step 2: Run and watch them fail**
 
 Run: `prove -l t/15-util.t t/40-facade.t t/50-system.t`
-Expected: FAIL, `Can't locate WWW/iDRAC/Util.pm in @INC`; `t/40-facade.t` scheitert an `Can't locate object method "new" via package "WWW::iDRAC"`.
+Expected: FAIL, `Can't locate WWW/iDRAC/Util.pm in @INC`; `t/40-facade.t` fails with `Can't locate object method "new" via package "WWW::iDRAC"`.
 
-- [ ] **Step 3: Util und die Rolle**
+- [ ] **Step 3: Util and the role**
 
 `lib/WWW/iDRAC/Util.pm`:
 
@@ -3110,7 +3110,7 @@ on the way to the answer is thrown as it is.
 
 - [ ] **Step 4: System**
 
-`lib/WWW/iDRAC/System.pm`. Die Service-Tag steht bei Dell im Redfish-Feld `SKU`; ob das auf iDRAC 7/8 so ist, zeigt Aufgabe 12.
+`lib/WWW/iDRAC/System.pm`. At Dell the service tag is in the Redfish field `SKU`; whether that holds on iDRAC 7/8 is shown by task 12.
 
 ```perl
 package WWW::iDRAC::System;
@@ -3288,9 +3288,9 @@ What L<WWW::iDRAC::Role::Capability/supports> asks.
 1;
 ```
 
-- [ ] **Step 5: Die Fassade**
+- [ ] **Step 5: The facade**
 
-`lib/WWW/iDRAC.pm` ersetzt den Stub. Die Synopsis nennt schon die Teile, die die Aufgaben 7 bis 11 nachliefern.
+`lib/WWW/iDRAC.pm` replaces the stub. The synopsis already names the parts that tasks 7 to 11 deliver later.
 
 ```perl
 package WWW::iDRAC;
@@ -3538,7 +3538,7 @@ away, but do not rely on that at the very end of a program.
 1;
 ```
 
-- [ ] **Step 6: `t/00-load.t` ergänzen**
+- [ ] **Step 6: Extend `t/00-load.t`**
 
 `t/00-load.t`:
 
@@ -3567,14 +3567,14 @@ for (qw(
 done_testing;
 ```
 
-- [ ] **Step 7: Laufen lassen**
+- [ ] **Step 7: Run**
 
 Run: `prove -lr t`
-Expected: PASS, 9 Dateien.
+Expected: PASS, 9 files.
 
-- [ ] **Step 8: Übergabe**
+- [ ] **Step 8: Handover**
 
-Vorschlag: `Add the facade, the capability role and the system inventory`.
+Suggestion: `Add the facade, the capability role and the system inventory`.
 
 ---
 
@@ -3588,10 +3588,10 @@ Vorschlag: `Add the facade, the capability role and the system inventory`.
 
 **Interfaces:**
 - Consumes: `WWW::iDRAC::Role::Capability` (`resource`, `linked_path`, `fetch`, `unsupported`), `WWW::iDRAC::Util`, `FakeiDRAC` (`delay`), `iDRACShapes`.
-- Produces: `WWW::iDRAC::Power` mit `state` → `on`/`off`/Zwischenzustand/`undef`; `on`, `off( force => 1 )`, `restart( force => 1 )`, `cycle` → 1; `wait_for( $state, timeout => 120, interval => 5 )` → 1/0; `consumption` → Hash; `reset_action( $method, $force )` → `( $target, $type )`; `consumption_from($doc)`.
+- Produces: `WWW::iDRAC::Power` with `state` → `on`/`off`/intermediate state/`undef`; `on`, `off( force => 1 )`, `restart( force => 1 )`, `cycle` → 1; `wait_for( $state, timeout => 120, interval => 5 )` → 1/0; `consumption` → hash; `reset_action( $method, $force )` → `( $target, $type )`; `consumption_from($doc)`.
 - Produces: `$idrac->power`.
 
-- [ ] **Step 1: Den Test schreiben**
+- [ ] **Step 1: Write the test**
 
 `t/51-power.t`:
 
@@ -3705,12 +3705,12 @@ is_deeply( \@warnings, [], 'no warnings' );
 done_testing;
 ```
 
-- [ ] **Step 2: Laufen lassen und scheitern sehen**
+- [ ] **Step 2: Run and watch it fail**
 
 Run: `prove -l t/51-power.t`
 Expected: FAIL, `Can't locate object method "power" via package "WWW::iDRAC"`.
 
-- [ ] **Step 3: Power schreiben**
+- [ ] **Step 3: Write Power**
 
 `lib/WWW/iDRAC/Power.pm`:
 
@@ -3918,9 +3918,9 @@ C<probe_restart> answer for the gentle form.
 1;
 ```
 
-- [ ] **Step 4: Die Fassade ergänzen**
+- [ ] **Step 4: Extend the facade**
 
-In `lib/WWW/iDRAC.pm` in den `use`-Block, alphabetisch: `use WWW::iDRAC::Power;`. Und unmittelbar vor `sub logout`:
+In `lib/WWW/iDRAC.pm`, into the `use` block, alphabetically: `use WWW::iDRAC::Power;`. And immediately before `sub logout`:
 
 ```perl
 has power => ( is => 'lazy' );
@@ -3934,18 +3934,18 @@ L<WWW::iDRAC::Power>: switching the server, and what it draws.
 =cut
 ```
 
-- [ ] **Step 5: `t/00-load.t` ergänzen**
+- [ ] **Step 5: Extend `t/00-load.t`**
 
-In die Liste, alphabetisch: `WWW::iDRAC::Power`.
+Into the list, alphabetically: `WWW::iDRAC::Power`.
 
-- [ ] **Step 6: Laufen lassen**
+- [ ] **Step 6: Run**
 
 Run: `prove -lr t`
-Expected: PASS, 10 Dateien.
+Expected: PASS, 10 files.
 
-- [ ] **Step 7: Übergabe**
+- [ ] **Step 7: Handover**
 
-Vorschlag: `Add power: state, switching, waiting, consumption`.
+Suggestion: `Add power: state, switching, waiting, consumption`.
 
 ---
 
@@ -3959,10 +3959,10 @@ Vorschlag: `Add power: state, switching, waiting, consumption`.
 
 **Interfaces:**
 - Consumes: `WWW::iDRAC::Role::Capability`, `WWW::iDRAC::Util`, `FakeiDRAC`, `iDRACShapes`.
-- Produces: `WWW::iDRAC::Sensors` mit `temperatures`, `fans`, `voltages`, `power_supplies` → Arrayref von Hashes; `temperature_from`, `fan_from`, `voltage_from`, `power_supply_from`.
+- Produces: `WWW::iDRAC::Sensors` with `temperatures`, `fans`, `voltages`, `power_supplies` → arrayref of hashes; `temperature_from`, `fan_from`, `voltage_from`, `power_supply_from`.
 - Produces: `$idrac->sensors`.
 
-- [ ] **Step 1: Den Test schreiben**
+- [ ] **Step 1: Write the test**
 
 `t/52-sensors.t`:
 
@@ -4046,12 +4046,12 @@ is_deeply( \@warnings, [], 'no warnings' );
 done_testing;
 ```
 
-- [ ] **Step 2: Laufen lassen und scheitern sehen**
+- [ ] **Step 2: Run and watch it fail**
 
 Run: `prove -l t/52-sensors.t`
 Expected: FAIL, `Can't locate object method "sensors" via package "WWW::iDRAC"`.
 
-- [ ] **Step 3: Sensors schreiben**
+- [ ] **Step 3: Write Sensors**
 
 `lib/WWW/iDRAC/Sensors.pm`:
 
@@ -4215,9 +4215,9 @@ What L<WWW::iDRAC::Role::Capability/supports> asks.
 1;
 ```
 
-- [ ] **Step 4: Die Fassade ergänzen**
+- [ ] **Step 4: Extend the facade**
 
-In den `use`-Block: `use WWW::iDRAC::Sensors;`. Vor `sub logout`:
+Into the `use` block: `use WWW::iDRAC::Sensors;`. Before `sub logout`:
 
 ```perl
 has sensors => ( is => 'lazy' );
@@ -4231,18 +4231,18 @@ L<WWW::iDRAC::Sensors>: temperatures, fans, voltages, power supplies.
 =cut
 ```
 
-- [ ] **Step 5: `t/00-load.t` ergänzen**
+- [ ] **Step 5: Extend `t/00-load.t`**
 
-In die Liste: `WWW::iDRAC::Sensors`.
+Into the list: `WWW::iDRAC::Sensors`.
 
-- [ ] **Step 6: Laufen lassen**
+- [ ] **Step 6: Run**
 
 Run: `prove -lr t`
-Expected: PASS, 11 Dateien.
+Expected: PASS, 11 files.
 
-- [ ] **Step 7: Übergabe**
+- [ ] **Step 7: Handover**
 
-Vorschlag: `Add sensors: temperatures, fans, voltages, power supplies`.
+Suggestion: `Add sensors: temperatures, fans, voltages, power supplies`.
 
 ---
 
@@ -4255,11 +4255,11 @@ Vorschlag: `Add sensors: temperatures, fans, voltages, power supplies`.
 - Modify: `t/00-load.t`
 
 **Interfaces:**
-- Consumes: `WWW::iDRAC::Role::Capability` (`fetch_members` mit `limit`), `WWW::iDRAC::Util`, `FakeiDRAC`, `iDRACShapes`.
-- Produces: `WWW::iDRAC::Logs` mit `sel( limit => 50 )`, `lifecycle( limit => 50 )` → Arrayref von Hashes, neueste zuerst; `clear_sel` → 1; `service( $id, $method )`, `entries( $id, $method, limit => $n )`, `clear_action`, `entry_from($doc)`.
+- Consumes: `WWW::iDRAC::Role::Capability` (`fetch_members` with `limit`), `WWW::iDRAC::Util`, `FakeiDRAC`, `iDRACShapes`.
+- Produces: `WWW::iDRAC::Logs` with `sel( limit => 50 )`, `lifecycle( limit => 50 )` → arrayref of hashes, newest first; `clear_sel` → 1; `service( $id, $method )`, `entries( $id, $method, limit => $n )`, `clear_action`, `entry_from($doc)`.
 - Produces: `$idrac->logs`.
 
-- [ ] **Step 1: Den Test schreiben**
+- [ ] **Step 1: Write the test**
 
 `t/53-logs.t`:
 
@@ -4354,14 +4354,14 @@ is_deeply( \@warnings, [], 'no warnings' );
 done_testing;
 ```
 
-- [ ] **Step 2: Laufen lassen und scheitern sehen**
+- [ ] **Step 2: Run and watch it fail**
 
 Run: `prove -l t/53-logs.t`
 Expected: FAIL, `Can't locate object method "logs" via package "WWW::iDRAC"`.
 
-- [ ] **Step 3: Logs schreiben**
+- [ ] **Step 3: Write Logs**
 
-`lib/WWW/iDRAC/Logs.pm`. `limit` nimmt die ersten Einträge, wie der Controller sie liefert; dass das die neuesten sind, ist eine Annahme, die die Live-Suite in Aufgabe 13 prüft.
+`lib/WWW/iDRAC/Logs.pm`. `limit` takes the first entries as the controller delivers them; that these are the newest is an assumption that the live suite checks in task 13.
 
 ```perl
 package WWW::iDRAC::Logs;
@@ -4506,9 +4506,9 @@ What L<WWW::iDRAC::Role::Capability/supports> asks.
 1;
 ```
 
-- [ ] **Step 4: Die Fassade ergänzen**
+- [ ] **Step 4: Extend the facade**
 
-In den `use`-Block: `use WWW::iDRAC::Logs;`. Vor `sub logout`:
+Into the `use` block: `use WWW::iDRAC::Logs;`. Before `sub logout`:
 
 ```perl
 has logs => ( is => 'lazy' );
@@ -4522,18 +4522,18 @@ L<WWW::iDRAC::Logs>: the system event log and the lifecycle log.
 =cut
 ```
 
-- [ ] **Step 5: `t/00-load.t` ergänzen**
+- [ ] **Step 5: Extend `t/00-load.t`**
 
-In die Liste: `WWW::iDRAC::Logs`.
+Into the list: `WWW::iDRAC::Logs`.
 
-- [ ] **Step 6: Laufen lassen**
+- [ ] **Step 6: Run**
 
 Run: `prove -lr t`
-Expected: PASS, 12 Dateien.
+Expected: PASS, 12 files.
 
-- [ ] **Step 7: Übergabe**
+- [ ] **Step 7: Handover**
 
-Vorschlag: `Add logs: the system event log and the lifecycle log`.
+Suggestion: `Add logs: the system event log and the lifecycle log`.
 
 ---
 
@@ -4547,10 +4547,10 @@ Vorschlag: `Add logs: the system event log and the lifecycle log`.
 
 **Interfaces:**
 - Consumes: `WWW::iDRAC::Role::Capability`, `WWW::iDRAC::Util`, `WWW::iDRAC::Redfish::forget_session`, `FakeiDRAC`, `iDRACShapes`.
-- Produces: `WWW::iDRAC::Manager` mit `info`, `network` → Hash; `restart` → 1; `reset_action` → Ziel; `info_from($doc)`, `network_from($doc)`.
+- Produces: `WWW::iDRAC::Manager` with `info`, `network` → hash; `restart` → 1; `reset_action` → target; `info_from($doc)`, `network_from($doc)`.
 - Produces: `$idrac->manager`.
 
-- [ ] **Step 1: Den Test schreiben**
+- [ ] **Step 1: Write the test**
 
 `t/54-manager.t`:
 
@@ -4634,12 +4634,12 @@ is_deeply( \@warnings, [], 'no warnings' );
 done_testing;
 ```
 
-- [ ] **Step 2: Laufen lassen und scheitern sehen**
+- [ ] **Step 2: Run and watch it fail**
 
 Run: `prove -l t/54-manager.t`
 Expected: FAIL, `Can't locate object method "manager" via package "WWW::iDRAC"`.
 
-- [ ] **Step 3: Manager schreiben**
+- [ ] **Step 3: Write Manager**
 
 `lib/WWW/iDRAC/Manager.pm`:
 
@@ -4781,9 +4781,9 @@ What L<WWW::iDRAC::Role::Capability/supports> asks.
 1;
 ```
 
-- [ ] **Step 4: Die Fassade ergänzen**
+- [ ] **Step 4: Extend the facade**
 
-In den `use`-Block: `use WWW::iDRAC::Manager;`. Vor `sub logout`:
+Into the `use` block: `use WWW::iDRAC::Manager;`. Before `sub logout`:
 
 ```perl
 has manager => ( is => 'lazy' );
@@ -4797,18 +4797,18 @@ L<WWW::iDRAC::Manager>: the iDRAC itself.
 =cut
 ```
 
-- [ ] **Step 5: `t/00-load.t` ergänzen**
+- [ ] **Step 5: Extend `t/00-load.t`**
 
-In die Liste: `WWW::iDRAC::Manager`.
+Into the list: `WWW::iDRAC::Manager`.
 
-- [ ] **Step 6: Laufen lassen**
+- [ ] **Step 6: Run**
 
 Run: `prove -lr t`
-Expected: PASS, 13 Dateien.
+Expected: PASS, 13 files.
 
-- [ ] **Step 7: Übergabe**
+- [ ] **Step 7: Handover**
 
-Vorschlag: `Add manager: the controller itself, its network, restarting it`.
+Suggestion: `Add manager: the controller itself, its network, restarting it`.
 
 ---
 
@@ -4821,11 +4821,11 @@ Vorschlag: `Add manager: the controller itself, its network, restarting it`.
 - Modify: `t/00-load.t`
 
 **Interfaces:**
-- Consumes: `WWW::iDRAC::Redfish` (`root`, `locate`, `get`), `supports` der fünf Fähigkeits-Klassen, `WWW::iDRAC::Util`.
-- Produces: `WWW::iDRAC::Capabilities->new( redfish =>, areas => { system =>, power =>, sensors =>, logs =>, manager => } )` mit `facts` → `{ generation, model, firmware, redfish_version, license }`, den gleichnamigen Methoden, `supports('area.method')` → 1/0, `facts_from( root =>, system =>, manager => )`, `generation_from($model)`.
+- Consumes: `WWW::iDRAC::Redfish` (`root`, `locate`, `get`), `supports` of the five capability classes, `WWW::iDRAC::Util`.
+- Produces: `WWW::iDRAC::Capabilities->new( redfish =>, areas => { system =>, power =>, sensors =>, logs =>, manager => } )` with `facts` → `{ generation, model, firmware, redfish_version, license }`, the methods of the same names, `supports('area.method')` → 1/0, `facts_from( root =>, system =>, manager => )`, `generation_from($model)`.
 - Produces: `$idrac->capabilities`.
 
-- [ ] **Step 1: Den Test schreiben**
+- [ ] **Step 1: Write the test**
 
 `t/60-capabilities.t`:
 
@@ -4903,14 +4903,14 @@ is_deeply( \@warnings, [], 'no warnings' );
 done_testing;
 ```
 
-- [ ] **Step 2: Laufen lassen und scheitern sehen**
+- [ ] **Step 2: Run and watch it fail**
 
 Run: `prove -l t/60-capabilities.t`
 Expected: FAIL, `Can't locate object method "capabilities" via package "WWW::iDRAC"`.
 
-- [ ] **Step 3: Capabilities schreiben**
+- [ ] **Step 3: Write Capabilities**
 
-`lib/WWW/iDRAC/Capabilities.pm`. Die Generation kommt aus dem Modell, das der Manager meldet und das die Server-Generation nennt (12G ist iDRAC 7, 13G iDRAC 8, 14G bis 16G iDRAC 9, 17G iDRAC 10). Hat Aufgabe 5 gezeigt, dass ein Controller sein Modell anders meldet, wird `generation_from` hier um diese Form erweitert, mit dem gemessenen Wert als Testfall in `t/60-capabilities.t`.
+`lib/WWW/iDRAC/Capabilities.pm`. The generation comes from the model the manager reports, which names the server generation (12G is iDRAC 7, 13G iDRAC 8, 14G to 16G iDRAC 9, 17G iDRAC 10). If task 5 has shown that a controller reports its model differently, `generation_from` is extended here by that form, with the measured value as a test case in `t/60-capabilities.t`.
 
 ```perl
 package WWW::iDRAC::Capabilities;
@@ -5065,9 +5065,9 @@ versions. A name that is no method is a L<WWW::iDRAC::Error::Validation>.
 1;
 ```
 
-- [ ] **Step 4: Die Fassade ergänzen**
+- [ ] **Step 4: Extend the facade**
 
-In den `use`-Block: `use WWW::iDRAC::Capabilities;`. Vor `sub logout`:
+Into the `use` block: `use WWW::iDRAC::Capabilities;`. Before `sub logout`:
 
 ```perl
 has capabilities => ( is => 'lazy' );
@@ -5087,7 +5087,7 @@ L<WWW::iDRAC::Capabilities>: what this controller is and what it can do.
 =cut
 ```
 
-- [ ] **Step 5: `t/00-load.t` ersetzen**
+- [ ] **Step 5: Replace `t/00-load.t`**
 
 `t/00-load.t`:
 
@@ -5121,29 +5121,29 @@ for (qw(
 done_testing;
 ```
 
-- [ ] **Step 6: Laufen lassen**
+- [ ] **Step 6: Run**
 
 Run: `prove -lr t`
-Expected: PASS, 14 Dateien.
+Expected: PASS, 14 files.
 
-- [ ] **Step 7: Übergabe**
+- [ ] **Step 7: Handover**
 
-Vorschlag: `Add capabilities: what this controller is, and supports`.
+Suggestion: `Add capabilities: what this controller is, and supports`.
 
 ---
 
-### Task 12: Jede lesende Methode gegen jede Aufnahme
+### Task 12: Every reading method against every recording
 
-Hier trifft der Code zum ersten Mal auf das, was echte Controller antworten. Der Test ist kurz; die Arbeit dieser Aufgabe ist, was er findet.
+Here the code meets for the first time what real controllers answer. The test is short; the work of this task is what it finds.
 
 **Files:**
 - Test: `t/85-fixtures.t`
-- Modify: je nach Befund die Fähigkeits-Klasse und ihr Test
+- Modify: depending on the finding, the capability class and its test
 
 **Interfaces:**
-- Consumes: `FakeiDRAC->from_file`, `iDRACShapes` (`read_methods`, `shape_ok`), `t/fixtures/*/redfish.json` (Aufgabe 5), alle Fähigkeits-Klassen.
+- Consumes: `FakeiDRAC->from_file`, `iDRACShapes` (`read_methods`, `shape_ok`), `t/fixtures/*/redfish.json` (task 5), all capability classes.
 
-- [ ] **Step 1: Den Test schreiben**
+- [ ] **Step 1: Write the test**
 
 `t/85-fixtures.t`:
 
@@ -5207,33 +5207,33 @@ for my $name ( sort keys %controller ) {
 done_testing;
 ```
 
-- [ ] **Step 2: Laufen lassen**
+- [ ] **Step 2: Run**
 
 Run: `prove -lv t/85-fixtures.t`
-Expected: je ein Subtest für `idrac7`, `idrac8` und `the invented controller`. Fehlen die Aufnahmen noch, läuft nur der dritte; dann bleibt diese Aufgabe offen, bis Aufgabe 5 erledigt ist.
+Expected: one subtest each for `idrac7`, `idrac8` and `the invented controller`. If the recordings are still missing, only the third runs; then this task stays open until task 5 is done.
 
-Beim ersten Lauf mit einer neuen Aufnahme scheitert ihr Subtest an `there is no t/fixtures/<name>/expect.json` und druckt, was die Aufnahme zeigt: welche Methoden `Unsupported` sind, welche eine leere Liste liefern und welche Schlüssel in jeder Zeile `undef` sind. Diese Liste ist der Befund dieser Aufgabe. Jeder Schlüssel unter `undef` ist entweder ein Feld, das dieser Controller nicht liefert (bleibt stehen), oder eines, das der Code unter falschem Namen sucht (Fehler, Vorgehen wie in Step 3). Erst wenn sie stimmt, wird sie als `expect.json` gespeichert.
+On the first run with a new recording its subtest fails with `there is no t/fixtures/<name>/expect.json` and prints what the recording shows: which methods are `Unsupported`, which return an empty list and which keys are `undef` in every row. This list is the finding of this task. Every key under `undef` is either a field this controller does not deliver (stays) or one the code looks for under a wrong name (a bug, proceed as in step 3). Only when it is right is it saved as `expect.json`.
 
-- [ ] **Step 3: Befunde abarbeiten**
+- [ ] **Step 3: Work through the findings**
 
-Für jede Zeile, die nicht `ok` ist, gilt dasselbe Vorgehen:
+For every line that is not `ok`, the same procedure applies:
 
-1. Das Dokument aus der Aufnahme heraussuchen, an dem die Methode scheitert (`perl -MJSON::PP -e 'my ( $file, $path ) = @ARGV; open my $fh, "<", $file or die $!; local $/; print JSON::PP->new->pretty->canonical->encode( JSON::PP->new->decode(<$fh>)->{$path} )' t/fixtures/idrac7/redfish.json '<Pfad>'`).
-2. In der Test-Datei der Klasse (`t/50-system.t` bis `t/54-manager.t`) einen Subtest schreiben, der die `*_from`-Funktion mit genau diesem Ausschnitt aufruft und das richtige Ergebnis verlangt. Laufen lassen, scheitern sehen.
-3. Die Klasse ändern. Die Schlüssel in `t/lib/iDRACShapes.pm` bleiben, wie sie sind; es ändert sich nur, woher ein Wert kommt.
+1. Find the document in the recording on which the method fails (`perl -MJSON::PP -e 'my ( $file, $path ) = @ARGV; open my $fh, "<", $file or die $!; local $/; print JSON::PP->new->pretty->canonical->encode( JSON::PP->new->decode(<$fh>)->{$path} )' t/fixtures/idrac7/redfish.json '<path>'`).
+2. In the class's test file (`t/50-system.t` to `t/54-manager.t`) write a subtest that calls the `*_from` function with exactly this excerpt and demands the right result. Run, watch it fail.
+3. Change the class. The keys in `t/lib/iDRACShapes.pm` stay as they are; only where a value comes from changes.
 4. `prove -lr t`.
 
-Was ein Befund ist und was nicht:
+What is a finding and what is not:
 
-| Zeile im Test | Bedeutung | Handlung |
+| Line in the test | Meaning | Action |
 |---|---|---|
-| `<method>: not on this controller`, als `ok` | Der Controller hat die Ressource nicht. Richtig so. | In Spec-Abschnitt 9 eintragen, welche Methoden auf welchem Gerät `Unsupported` sind. |
-| `shape_ok` scheitert | Die Übersetzung liefert andere Schlüssel. | Fehler in der Klasse; wie oben. |
-| ein anderer Fehler als `Unsupported` | Der Code kommt mit einem Dokument nicht zurecht. | Fehler in der Klasse; wie oben. |
-| `no warnings` scheitert | Ein Wert hat eine Form, mit der `Util` nicht rechnet. | Testfall in `t/15-util.t`, dann `Util` ändern. |
-| alle Schlüssel einer Methode sind `undef` | Der Controller nennt die Felder anders. | Kein Testfehler, aber ein Befund: mit `prove -lv` und einem `diag explain` nachsehen, Feldnamen aus der Aufnahme ergänzen, mit Testfall. |
+| `<method>: not on this controller`, as `ok` | The controller does not have the resource. That is correct. | Enter in spec section 9 which methods are `Unsupported` on which device. |
+| `shape_ok` fails | The translation returns different keys. | Bug in the class; as above. |
+| an error other than `Unsupported` | The code cannot cope with a document. | Bug in the class; as above. |
+| `no warnings` fails | A value has a shape `Util` does not expect. | Test case in `t/15-util.t`, then change `Util`. |
+| all keys of a method are `undef` | The controller names the fields differently. | Not a test failure, but a finding: look with `prove -lv` and a `diag explain`, add field names from the recording, with a test case. |
 
-Für den letzten Fall, einmal über beide Aufnahmen:
+For the last case, once over both recordings:
 
 ```bash
 for n in idrac7 idrac8; do perl -Ilib -It/lib -MFakeiDRAC -MWWW::iDRAC -MiDRACShapes -e '
@@ -5248,24 +5248,24 @@ for n in idrac7 idrac8; do perl -Ilib -It/lib -MFakeiDRAC -MWWW::iDRAC -MiDRACSh
   }' $n; done
 ```
 
-Jeder Schlüssel in dieser Liste wird entweder aus der Aufnahme gefüllt oder in Spec-Abschnitt 9 als „liefert dieser Controller nicht“ vermerkt.
+Every key in this list is either filled from the recording or noted in spec section 9 as "this controller does not deliver it".
 
-- [ ] **Step 4: Übergabe**
+- [ ] **Step 4: Handover**
 
-Vorschlag: `Run every reading method against the recorded controllers`, mit den Korrekturen aus Step 3 im selben Commit oder je Befund einem eigenen.
+Suggestion: `Run every reading method against the recorded controllers`, with the corrections from step 3 in the same commit or one commit per finding.
 
 ---
 
-### Task 13: Live-Suite, README, CLAUDE.md, Changes
+### Task 13: Live suite, README, CLAUDE.md, Changes
 
 **Files:**
 - Test: `t/90-live-idrac.t`
-- Modify: `README.md`, `CLAUDE.md`, `Changes` (jeweils ganz ersetzen)
+- Modify: `README.md`, `CLAUDE.md`, `Changes` (each replaced entirely)
 
 **Interfaces:**
-- Consumes: alles aus den Aufgaben 2 bis 12.
+- Consumes: everything from tasks 2 to 12.
 
-- [ ] **Step 1: Die Live-Suite schreiben**
+- [ ] **Step 1: Write the live suite**
 
 `t/90-live-idrac.t`:
 
@@ -5393,14 +5393,14 @@ subtest 'changing things' => sub {
 done_testing;
 ```
 
-- [ ] **Step 2: Ohne Gerät laufen lassen**
+- [ ] **Step 2: Run without a device**
 
 Run: `prove -lr t`
-Expected: PASS, 16 Dateien; `t/90-live-idrac.t` ist `skipped: set IDRAC_HOST, IDRAC_USERNAME and IDRAC_PASSWORD to run the iDRAC live test`.
+Expected: PASS, 16 files; `t/90-live-idrac.t` is `skipped: set IDRAC_HOST, IDRAC_USERNAME and IDRAC_PASSWORD to run the iDRAC live test`.
 
-- [ ] **Step 3: Lesend gegen beide Geräte**
+- [ ] **Step 3: Read-only against both devices**
 
-Braucht die Dateien aus Aufgabe 5. `IDRAC_LIVE_DESTRUCTIVE` bleibt ungesetzt.
+Needs the files from task 5. `IDRAC_LIVE_DESTRUCTIVE` stays unset.
 
 ```bash
 cd ~/dev/p5-www-idrac
@@ -5408,27 +5408,27 @@ cd ~/dev/p5-www-idrac
 ( set -a; . ~/.config/idrac/r720xd.env; set +a; prove -lv t/90-live-idrac.t ) 2>&1 | tee /tmp/idrac7-live.txt
 ```
 
-Expected: `Result: PASS` für beide; der Subtest `changing things` ist übersprungen. Die `diag`-Zeilen nennen Generation, Firmware und was `supports` für die schaltenden Methoden antwortet.
+Expected: `Result: PASS` for both; the subtest `changing things` is skipped. The `diag` lines name generation, firmware and what `supports` answers for the switching methods.
 
-Scheitert `the first entries the controller serves are the newest`, liefert dieser Controller seine Logs älteste zuerst. Dann stimmt die Annahme hinter `limit` nicht: Notiz auf die Karte, Getty entscheidet, ob `logs` in dem Fall alle Einträge holt.
+If `the first entries the controller serves are the newest` fails, this controller delivers its logs oldest first. Then the assumption behind `limit` does not hold: a note on the card, Getty decides whether `logs` fetches all entries in that case.
 
-Scheitert etwas anderes, ist das ein Unterschied zwischen Aufnahme und Gerät; Vorgehen wie in Aufgabe 12, Step 3.
+If something else fails, that is a difference between recording and device; proceed as in task 12, step 3.
 
-- [ ] **Step 4: Der schaltende Teil — nur Getty**
+- [ ] **Step 4: The switching part — Getty only**
 
-Diesen Schritt führt kein Agent aus. Er leert das Event-Log, schaltet den Server aus und wieder ein und startet den iDRAC neu. Getty entscheidet, ob und an welchem Gerät:
+No agent runs this step. It clears the event log, switches the server off and on again and restarts the iDRAC. Getty decides whether and on which device:
 
 ```bash
 ( set -a; . ~/.config/idrac/t330.env; set +a; IDRAC_LIVE_DESTRUCTIVE=1 prove -lv t/90-live-idrac.t )
 ```
 
-Bietet der Controller kein sanftes Herunterfahren an, wird das Schalten übersprungen. Den Strom hart abzuschalten erlaubt erst ein zweiter Schalter:
+If the controller offers no graceful shutdown, switching is skipped. Cutting power hard is only allowed by a second switch:
 
 ```bash
 ( set -a; . ~/.config/idrac/t330.env; set +a; IDRAC_LIVE_DESTRUCTIVE=1 IDRAC_LIVE_FORCE_OFF=1 prove -lv t/90-live-idrac.t )
 ```
 
-Das Ergebnis, oder dass der Lauf nicht stattgefunden hat, steht in der Übergabe.
+The result, or that the run did not take place, goes into the handover.
 
 - [ ] **Step 5: README**
 
@@ -5602,17 +5602,17 @@ Revision history for WWW-iDRAC
       IDRAC_LIVE_DESTRUCTIVE is set
 ```
 
-- [ ] **Step 8: Alles zusammen**
+- [ ] **Step 8: Everything together**
 
 ```bash
 cd ~/dev/p5-www-idrac && git add -A && prove -lr t && dzil test --all
 grep -rn 'Embedded\.1' lib/ | grep -v '^\S*:[0-9]*:    '
 ```
 
-Expected: `prove` PASS mit 16 Dateien, `dzil test --all` endet mit `all's well`. Das `grep` findet nichts: Feste Ressourcennamen stehen unter `lib/` nur in eingerückten POD-Beispielen.
+Expected: `prove` PASS with 16 files, `dzil test --all` ends with `all's well`. The `grep` finds nothing: fixed resource names appear under `lib/` only in indented POD examples.
 
-Meldet `dzil test` POD-Fehler, gehen sie an `www-idrac-doc-writer`; die Listings dieses Plans sind nicht durch `dzil` gelaufen.
+If `dzil test` reports POD errors, they go to `www-idrac-doc-writer`; the listings of this plan have not gone through `dzil`.
 
-- [ ] **Step 9: Übergabe**
+- [ ] **Step 9: Handover**
 
-Vorschlag: `Add the live suite and the documentation of phase 1`. Der Release-Manager setzt danach Karte 2 auf `done`. Ein Release und ein GitHub-Repo sind nicht Teil dieses Plans.
+Suggestion: `Add the live suite and the documentation of phase 1`. The release manager then sets card 2 to `done`. A release and a GitHub repo are not part of this plan.

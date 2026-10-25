@@ -1,21 +1,21 @@
 # WWW::iDRAC – Design
 
-Datum: 2026-10-04
-Status: freigegeben am 2026-10-04. Abschnitt 9 nennt, was am Gerät entschieden wurde; Phase 2 (racadm über SSH) ist seit 2026-10-14 gebaut.
+Date: 2026-10-04
+Status: approved on 2026-10-04. Section 9 names what was decided on the device; phase 2 (racadm over SSH) has been built since 2026-10-14.
 Plan: `docs/superpowers/plans/2026-10-04-www-idrac-phase-1.md`
-Distribution: `WWW-iDRAC` (Repo `p5-www-idrac`), CPAN-fähig, `[@Author::GETTY]`
-Zwilling: `Net-Async-iDRAC` (Repo `p5-net-async-idrac`), später, strukturgleich mit `_f`-Methoden.
+Distribution: `WWW-iDRAC` (repo `p5-www-idrac`), CPAN-ready, `[@Author::GETTY]`
+Twin: `Net-Async-iDRAC` (repo `p5-net-async-idrac`), later, structurally identical with `_f` methods.
 
-## 1. Was WWW::iDRAC ist
+## 1. What WWW::iDRAC is
 
-**WWW::iDRAC ist der Perl-Client für Dells iDRAC: Inventar, Power, Sensoren, Logs und
-der Controller selbst, hinter einer Fassade, die nach Fähigkeiten geschnitten ist und
-nicht nach Protokollen.**
+**WWW::iDRAC is the Perl client for Dell's iDRAC: inventory, power, sensors, logs and
+the controller itself, behind a facade that is cut along capabilities and
+not along protocols.**
 
-Es gibt keinen konkreten Anlass, sondern eine Lücke: Auf CPAN existiert keine iDRAC-Dist.
-In der Nähe liegen nur `Mojo-Redfish-Client` (0.03 von 2019, generisch, an Mojolicious
-gebunden) und `DMTF-WSMan` (2012, verwaist). Ziel ist ein allgemeiner Client, der über
-Phasen vollständig wird.
+There is no concrete trigger, but a gap: no iDRAC dist exists on CPAN.
+Nearby there are only `Mojo-Redfish-Client` (0.03 from 2019, generic, tied to
+Mojolicious) and `DMTF-WSMan` (2012, abandoned). The goal is a general client that becomes
+complete over phases.
 
 ```perl
 my $idrac = WWW::iDRAC->new(
@@ -32,129 +32,129 @@ $idrac->power->off;
 $idrac->power->wait_for( 'off', timeout => 120 );
 ```
 
-Der Aufrufer weiß nicht, über welches Protokoll eine Fähigkeit läuft. In Phase 1 ist das
-immer Redfish. Seit Phase 2 schließt ein zweiter Transport, racadm über SSH, die Lücken,
-die Redfish auf iDRAC 7 und 8 lässt (BIOS-Attribute, Job-Queue, Virtual Media, Lizenz),
-ohne dass sich die öffentliche API der Phase-1-Klassen ändert.
+The caller does not know which protocol a capability runs over. In phase 1 that is
+always Redfish. Since phase 2 a second transport, racadm over SSH, closes the gaps
+that Redfish leaves on iDRAC 7 and 8 (BIOS attributes, job queue, virtual media, license),
+without the public API of the phase 1 classes changing.
 
-### Die Hardware, gegen die gebaut wird
+### The hardware it is built against
 
-| Gerät | Generation | Controller |
+| Device | Generation | Controller |
 |---|---|---|
 | PowerEdge T330 | 13G | iDRAC 8 |
 | PowerEdge R720xd | 12G | iDRAC 7 |
 
-Beide teilen die Firmware-Linie 2.x. Redfish ist dort nur in Teilen vorhanden: Inventar,
-Power, Sensoren und Logs ja; Virtual Media einhängen, die meisten Dell-OEM-Actions,
-Storage und Firmware-Update im Wesentlichen erst ab iDRAC 9. Diese Grenzen stammen aus
-der Dokumentation und werden in Karte 1 am Gerät nachgemessen (Abschnitt 9).
+Both share the 2.x firmware line. Redfish is only partially present there: inventory,
+power, sensors and logs yes; mounting virtual media, most Dell OEM actions,
+storage and firmware update essentially only from iDRAC 9. These limits come from
+the documentation and are re-measured on the device in card 1 (section 9).
 
-### Was WWW::iDRAC nicht ist
+### What WWW::iDRAC is not
 
-- **Kein generischer Redfish-Client.** Der Redfish-Teil ist intern sauber abgegrenzt und
-  ließe sich später als eigene Dist herauslösen. Ohne ein Nicht-Dell-Testgerät wäre eine
-  herstellerneutrale Schicht jetzt Spekulation.
-- **Kein IPMI.** Wer `ipmitool` braucht, nimmt `ipmitool`.
-- **Keine virtuelle Konsole.** KVM/HTML5-Konsole ist keine API.
-- **Kein OpenManage-Enterprise-Client.** Die Dist redet mit einem einzelnen iDRAC.
-- **Kein Kommandozeilenwerkzeug in Phase 1.**
+- **Not a generic Redfish client.** The Redfish part is cleanly separated internally and
+  could later be extracted as a dist of its own. Without a non-Dell test device a
+  vendor-neutral layer would be speculation now.
+- **No IPMI.** Whoever needs `ipmitool` uses `ipmitool`.
+- **No virtual console.** The KVM/HTML5 console is not an API.
+- **Not an OpenManage Enterprise client.** The dist talks to a single iDRAC.
+- **No command-line tool in phase 1.**
 
-## 2. Aufbau
+## 2. Structure
 
 ```
-WWW::iDRAC                    Fassade: host, Zugangsdaten, TLS, ua
-  ├─ ->capabilities  WWW::iDRAC::Capabilities   was dieser Controller ist und kann
-  ├─ ->system        WWW::iDRAC::System         Inventar und Zustand des Servers
-  ├─ ->power         WWW::iDRAC::Power          Schalten und Leistungsaufnahme
-  ├─ ->sensors       WWW::iDRAC::Sensors        Temperaturen, Lüfter, Netzteile, Spannungen
-  ├─ ->logs          WWW::iDRAC::Logs           System-Event-Log und Lifecycle-Log
-  ├─ ->manager       WWW::iDRAC::Manager        der iDRAC selbst
-  ├─ ->bios          WWW::iDRAC::Bios           BIOS-Attribute (racadm)
-  ├─ ->jobs          WWW::iDRAC::Jobs           Job-Queue (racadm)
-  ├─ ->virtual_media WWW::iDRAC::VirtualMedia   Remote-Image (racadm)
-  ├─ ->redfish       WWW::iDRAC::Redfish        Transport 1 und Notausgang
-  └─ ->racadm        WWW::iDRAC::Racadm         Transport 2 (SSH) und Notausgang
-                       └─ WWW::iDRAC::Racadm::SSH   die I/O, über Net::OpenSSH
+WWW::iDRAC                    facade: host, credentials, TLS, ua
+  ├─ ->capabilities  WWW::iDRAC::Capabilities   what this controller is and can do
+  ├─ ->system        WWW::iDRAC::System         inventory and state of the server
+  ├─ ->power         WWW::iDRAC::Power          switching and power consumption
+  ├─ ->sensors       WWW::iDRAC::Sensors        temperatures, fans, power supplies, voltages
+  ├─ ->logs          WWW::iDRAC::Logs           system event log and lifecycle log
+  ├─ ->manager       WWW::iDRAC::Manager        the iDRAC itself
+  ├─ ->bios          WWW::iDRAC::Bios           BIOS attributes (racadm)
+  ├─ ->jobs          WWW::iDRAC::Jobs           job queue (racadm)
+  ├─ ->virtual_media WWW::iDRAC::VirtualMedia   remote image (racadm)
+  ├─ ->redfish       WWW::iDRAC::Redfish        transport 1 and escape hatch
+  └─ ->racadm        WWW::iDRAC::Racadm         transport 2 (SSH) and escape hatch
+                       └─ WWW::iDRAC::Racadm::SSH   the I/O, via Net::OpenSSH
 
-WWW::iDRAC::Role::Transport   transport_name, logout: was beide Transporte teilen
+WWW::iDRAC::Role::Transport   transport_name, logout: what both transports share
 WWW::iDRAC::Role::HTTP        build_request / read_response / send_request
-WWW::iDRAC::Role::Area        unsupported, supports: was jede Fähigkeits-Klasse teilt
+WWW::iDRAC::Role::Area        unsupported, supports: what every capability class shares
 WWW::iDRAC::Role::Capability  Area + Redfish (fetch, resource, linked_path)
-WWW::iDRAC::Role::Racadm      Area + racadm (racadm_run, Abbildung auf Unsupported)
+WWW::iDRAC::Role::Racadm      Area + racadm (racadm_run, mapping to Unsupported)
 WWW::iDRAC::Error             ::Validation, ::Network, ::API, ::Unsupported
 ```
 
-Form und Namen folgen `WWW::Keycloak`: Moo, eine Klasse pro Belang, ein Paket pro Datei,
-eine gemeinsame HTTP-Rolle, `Types::Standard`, `namespace::autoclean`.
+Shape and names follow `WWW::Keycloak`: Moo, one class per concern, one package per file,
+one shared HTTP role, `Types::Standard`, `namespace::autoclean`.
 
-**Die Regel, die den Schnitt trägt:** Öffentliche Methoden der Fähigkeits-Klassen geben
-normalisierte Perl-Daten zurück (Abschnitt 5), nie rohe Redfish-Dokumente. Nur
-`WWW::iDRAC::Redfish` kennt Pfade, `@odata`-Verweise und Redfish-Feldnamen nach außen;
-die Fähigkeits-Klassen übersetzen. Damit hängt kein Aufrufer an Redfish-Formen, und ein
-zweiter Transport kann in Phase 2 dieselben Daten liefern.
+**The rule that carries the cut:** public methods of the capability classes return
+normalized Perl data (section 5), never raw Redfish documents. Only
+`WWW::iDRAC::Redfish` exposes paths, `@odata` references and Redfish field names;
+the capability classes translate. So no caller depends on Redfish shapes, and a
+second transport can deliver the same data in phase 2.
 
-Eine Transport-Abstraktion mit nur einer Implementierung wurde in Phase 1 nicht gebaut.
-Sie ist in Phase 2 entstanden, als der zweite Transport ihre Form vorgab, und ist klein:
-`Role::Transport` verlangt nur `transport_name` und `logout`. Die Fähigkeits-Klassen
-teilen sich `Role::Area` (`unsupported`, `supports`, die `probe_*`-Konvention) und
-hängen je nach Transport an `Role::Capability` (Redfish) oder `Role::Racadm`. Keine
-Klasse kennt beide Transporte; die Redfish-Klassen sind unverändert.
+A transport abstraction with only one implementation was not built in phase 1.
+It came into being in phase 2, when the second transport dictated its shape, and it is small:
+`Role::Transport` requires only `transport_name` and `logout`. The capability classes
+share `Role::Area` (`unsupported`, `supports`, the `probe_*` convention) and
+depend, according to the transport, on `Role::Capability` (Redfish) or `Role::Racadm`. No
+class knows both transports; the Redfish classes are unchanged.
 
-## 3. Fassade
+## 3. Facade
 
-| Attribut | Bedeutung |
+| Attribute | Meaning |
 |---|---|
-| `host` | Pflicht. Name oder Adresse, optional mit `:port`. |
-| `username`, `password` | Pflicht. |
-| `session` | Standard `1`: Redfish-Session mit Token. `0`: Basic-Auth pro Anfrage. |
-| `verify_ssl` | Standard `1`. |
-| `ssl_ca_file` | CA oder das selbstsignierte Zertifikat des iDRAC. |
-| `ssl_fingerprint` | Zertifikat anpinnen (`sha256$…`), ohne CA. |
-| `ssl_opts` | Durchgereicht an `LWP::UserAgent`, für Sonderfälle. |
-| `timeout` | Standard 60 Sekunden; iDRACs antworten langsam. |
-| `ua` | Eigener `LWP::UserAgent`, überschreibt die TLS-Attribute. |
+| `host` | Required. Name or address, optionally with `:port`. |
+| `username`, `password` | Required. |
+| `session` | Default `1`: Redfish session with token. `0`: basic auth per request. |
+| `verify_ssl` | Default `1`. |
+| `ssl_ca_file` | CA or the self-signed certificate of the iDRAC. |
+| `ssl_fingerprint` | Pin the certificate (`sha256$…`), without a CA. |
+| `ssl_opts` | Passed through to `LWP::UserAgent`, for special cases. |
+| `timeout` | Default 60 seconds; iDRACs answer slowly. |
+| `ua` | Own `LWP::UserAgent`, overrides the TLS attributes. |
 
-**TLS.** iDRACs haben fast immer selbstsignierte Zertifikate, ausgestellt auf einen
-Namen, der nicht ihre Adresse ist. Die Prüfung ist trotzdem standardmäßig an.
-`ssl_fingerprint` ist der Weg für das Werkszertifikat: Ein angepinntes Zertifikat wird
-unabhängig vom Namen angenommen. `ssl_ca_file` passt zu einem Controller mit ordentlichem
-Zertifikat; allein scheitert es beim Werkszertifikat am Namen. `verify_ssl => 0` ist
-möglich, aber eine ausdrückliche Entscheidung des Aufrufers. Das ist
-dieselbe Linie wie beim Rex-Host-Key-Muster. Die Dist schaltet von sich aus weder
-TLS-Versionen noch Cipher herunter; wer ein altes Gerät nur so erreicht, tut das über
+**TLS.** iDRACs almost always have self-signed certificates, issued to a
+name that is not their address. Verification is on by default anyway.
+`ssl_fingerprint` is the way for the factory certificate: a pinned certificate is
+accepted regardless of the name. `ssl_ca_file` fits a controller with a proper
+certificate; on its own it fails on the factory certificate because of the name. `verify_ssl => 0` is
+possible, but an explicit decision of the caller. That is
+the same line as with the Rex host-key pattern. The dist on its own downgrades neither
+TLS versions nor ciphers; whoever can only reach an old device that way does it via
 `ssl_opts`.
 
-**Lebensdauer.** `logout` beendet die Session. Der Transport ruft es in `DEMOLISH` als
-letzten Versuch auf und schluckt Fehler; so endet die Session mit dem letzten Objekt, das
-sie benutzt, auch wenn das nicht die Fassade ist. Das ist nötig, weil ein iDRAC nur wenige gleichzeitige Sessions
-zulässt und verwaiste erst nach einem Timeout freigibt.
+**Lifetime.** `logout` ends the session. The transport calls it in `DEMOLISH` as a
+last attempt and swallows errors; so the session ends with the last object that
+uses it, even if that is not the facade. This is necessary because an iDRAC allows only a few concurrent sessions
+and frees orphaned ones only after a timeout.
 
-**SSH (Phase 2).** Die Fähigkeiten über racadm brauchen nur die Attribute, die die
-Redfish-Seite nicht kennt; alles Weitere ist optional:
+**SSH (phase 2).** The capabilities via racadm need only the attributes the
+Redfish side does not know; everything else is optional:
 
-| Attribut | Bedeutung |
+| Attribute | Meaning |
 |---|---|
-| `ssh` | Standard `1`. `0`: racadm wird nicht benutzt, Phase-2-Methoden sind `Unsupported`. |
-| `ssh_username`, `ssh_password` | Standard: `username`, `password`. Nur beide oder keins (sonst `Validation`). |
-| `ssh_port` | Standard 22. Der Port in `host` ist der HTTPS-Port. |
-| `ssh_host_key` | Host-Key anpinnen (`ssh-ed25519 AAAA…`). |
-| `ssh_known_hosts` | Eine `known_hosts`-Datei; nur sie zählt, die globale wird ignoriert (`GlobalKnownHostsFile=/dev/null`). Nicht zusammen mit `ssh_host_key`. Ohne beides: die Standarddateien des SSH-Clients. |
-| `ssh_verify_host_key` | Standard `1`. `0` nimmt jeden Key; nicht zusammen mit den zwei davor. |
-| `ssh_opts` | Weitere `-o Name=Wert` für den SSH-Client, für alte Algorithmen. |
+| `ssh` | Default `1`. `0`: racadm is not used, phase 2 methods are `Unsupported`. |
+| `ssh_username`, `ssh_password` | Default: `username`, `password`. Both or neither (otherwise `Validation`). |
+| `ssh_port` | Default 22. The port in `host` is the HTTPS port. |
+| `ssh_host_key` | Pin the host key (`ssh-ed25519 AAAA…`). |
+| `ssh_known_hosts` | A `known_hosts` file; only it counts, the global one is ignored (`GlobalKnownHostsFile=/dev/null`). Not together with `ssh_host_key`. Without either: the SSH client's default files. |
+| `ssh_verify_host_key` | Default `1`. `0` accepts any key; not together with the two before. |
+| `ssh_opts` | Further `-o Name=Value` for the SSH client, for old algorithms. |
 
-`timeout` gilt auch für SSH (Verbindung und jedes Kommando).
-| `racadm` | Ein eigener Transport statt des gebauten. |
+`timeout` also applies to SSH (connection and every command).
+| `racadm` | An own transport instead of the built one. |
 
-Dieselben Zugangsdaten sind der Standard, weil ein iDRAC Web- und SSH-Login aus
-derselben Benutzerverwaltung bedient; wer sie trennt, nutzt `ssh_username`/`ssh_password`.
-Der Host-Key wird geprüft (Haus-Muster wie bei Rex::LibSSH: Strict an, anpinnen oder
-seeden, überschreibbar, nie von selbst aus). `ssh_opts` überschreiben nur nicht, was
-`Racadm::SSH::options_from` festlegt (Host-Key-Prüfung, Login-Verfahren, ein
-Passwortversuch); ein Eintrag, der nicht `Name=Wert` ohne Leerzeichen und Shell-Zeichen
-ist, wirft `Validation`, und zwar erst beim Verbinden, nicht im Konstruktor. Die Dist
-setzt keine alten Algorithmen von selbst.
+The same credentials are the default, because an iDRAC serves web and SSH login from
+the same user management; whoever separates them uses `ssh_username`/`ssh_password`.
+The host key is verified (house pattern as with Rex::LibSSH: strict on, pin or
+seed, overridable, never off by itself). `ssh_opts` only do not override what
+`Racadm::SSH::options_from` sets (host key verification, login method, one
+password attempt); an entry that is not `Name=Value` without spaces and shell characters
+throws `Validation`, and only when connecting, not in the constructor. The dist
+sets no old algorithms by itself.
 
-## 4. Redfish-Transport (`WWW::iDRAC::Redfish`)
+## 4. Redfish transport (`WWW::iDRAC::Redfish`)
 
 ```perl
 my $doc = $idrac->redfish->get('/redfish/v1/Systems/System.Embedded.1');
@@ -164,74 +164,74 @@ $idrac->redfish->delete($path);
 my @docs = $idrac->redfish->members( $collection_path, limit => 50 );
 ```
 
-- **Anmeldung.** Beim ersten Aufruf wird der Service-Root gelesen und der Session-Pfad
-  aus `Links.Sessions` genommen, nicht fest verdrahtet (er unterscheidet sich zwischen
-  den Generationen). Der Token aus `X-Auth-Token` gilt für alle weiteren Anfragen. Bei
-  401 wird einmal neu angemeldet und die Anfrage wiederholt.
-- **Navigation.** System, Chassis und Manager werden über die Collections des
-  Service-Root gefunden, nicht über feste Namen wie `System.Embedded.1`. Diese
-  Wegweiser-Dokumente werden für die Lebensdauer des Objekts gemerkt. Messwerte und
-  Zustände werden nie gemerkt.
-- **Collections.** `members` gibt die Einträge einer Collection als Dokumente zurück.
-  Liefert der Controller sie schon vollständig in `Members`, werden sie so genommen;
-  stehen dort nur Verweise, holt `members` jeden einzeln, weil alte Firmware kein
-  `$expand` kennt. `limit` begrenzt die Zahl der Einträge und damit der Anfragen.
-- **Notausgang.** `->redfish` ist öffentlich und dokumentiert. Was die Fassade noch nicht
-  abdeckt, erreicht man darüber, mit rohen Redfish-Dokumenten.
+- **Login.** On the first call the service root is read and the session path
+  taken from `Links.Sessions`, not hard-wired (it differs between
+  the generations). The token from `X-Auth-Token` applies to all further requests. On
+  401 it logs in again once and repeats the request.
+- **Navigation.** System, chassis and manager are found via the collections of the
+  service root, not via fixed names like `System.Embedded.1`. These
+  signpost documents are remembered for the lifetime of the object. Readings and
+  states are never remembered.
+- **Collections.** `members` returns the entries of a collection as documents.
+  If the controller already delivers them complete in `Members`, they are taken as is;
+  if only references are there, `members` fetches each one individually, because old firmware does not
+  know `$expand`. `limit` caps the number of entries and thus of requests.
+- **Escape hatch.** `->redfish` is public and documented. What the facade does not cover
+  yet can be reached through it, with raw Redfish documents.
 
-## 5. Fähigkeiten
+## 5. Capabilities
 
-Rückgaben sind Hashrefs oder Arrayrefs von Hashrefs mit festen Schlüsseln in
-`snake_case`. Ein Schlüssel, zu dem der Controller nichts liefert, ist vorhanden und
-`undef`. `health` ist überall `ok`, `warning`, `critical` oder `undef`.
+Return values are hashrefs or arrayrefs of hashrefs with fixed keys in
+`snake_case`. A key for which the controller delivers nothing is present and
+`undef`. `health` is everywhere `ok`, `warning`, `critical` or `undef`.
 
 ### 5.1 `capabilities`
 
 `generation` (7, 8, 9, 10), `model`, `firmware`, `redfish_version`, `license`
-(`basic`, `express`, `enterprise`, `datacenter` oder `undef`, wenn nicht lesbar).
-Die Lizenz kommt seit Phase 2 aus `racadm license view` (Zeilen `License Description`,
-bei mehreren die höchste) und wird erst bei `license` oder `facts` gelesen, nie bei
-`generation`, `model`, `firmware`, `redfish_version`: Wer nur Redfish nutzt, öffnet
-keine SSH-Verbindung; `supports('bios.*')`, `'jobs.*'` und `'virtual_media.*'` öffnen
-sie ebenfalls, weil sie den Controller über racadm fragen. `undef` heißt nur: racadm aus
-(`ssh => 0`), der SSH-Port verweigert die Verbindung (`cause` `refused`), racadm
-antwortet mit einem Fehler (`Error::API`) oder keine Lizenz ist gelistet. Alles andere
-wird geworfen und nicht gemerkt: `Validation` und jedes andere `Error::Network` (Host-Key,
-Login, Zeitablauf, nicht erreichbar, sonstiges). Also kann `capabilities->license` werfen.
+(`basic`, `express`, `enterprise`, `datacenter` or `undef` if not readable).
+Since phase 2 the license comes from `racadm license view` (lines `License Description`,
+the highest if there are several) and is read only on `license` or `facts`, never on
+`generation`, `model`, `firmware`, `redfish_version`: whoever uses only Redfish opens
+no SSH connection; `supports('bios.*')`, `'jobs.*'` and `'virtual_media.*'` open
+it as well, because they ask the controller via racadm. `undef` only means: racadm off
+(`ssh => 0`), the SSH port refuses the connection (`cause` `refused`), racadm
+answers with an error (`Error::API`) or no license is listed. Everything else
+is thrown and not remembered: `Validation` and every other `Error::Network` (host key,
+login, timeout, unreachable, other). So `capabilities->license` can throw.
 
-`supports($name)` beantwortet, ob eine Fähigkeit auf diesem Controller vorhanden ist. Die
-Namen sind die der Methoden (`power.cycle`, `logs.clear_sel`). Die Antwort kommt aus dem,
-was der Controller selbst anbietet (vorhandene Ressourcen, `AllowableValues` der
-Actions), nicht aus einer Versionstabelle in der Dist.
+`supports($name)` answers whether a capability is present on this controller. The
+names are those of the methods (`power.cycle`, `logs.clear_sel`). The answer comes from
+what the controller itself offers (present resources, `AllowableValues` of the
+actions), not from a version table in the dist.
 
 ### 5.2 `system`
 
-| Methode | Rückgabe |
+| Method | Returns |
 |---|---|
 | `info` | `manufacturer`, `model`, `service_tag`, `serial`, `uuid`, `asset_tag`, `hostname`, `bios_version`, `power_state`, `health`, `cpu_count`, `cpu_model`, `memory_gib` |
-| `processors` | je CPU: `name`, `model`, `cores`, `threads`, `speed_mhz`, `health` |
-| `memory` | je Modul: `name`, `size_mib`, `type`, `speed_mhz`, `manufacturer`, `part_number`, `serial`, `health` |
-| `nics` | je Schnittstelle: `name`, `mac`, `speed_mbps`, `link_up`, `health` |
+| `processors` | per CPU: `name`, `model`, `cores`, `threads`, `speed_mhz`, `health` |
+| `memory` | per module: `name`, `size_mib`, `type`, `speed_mhz`, `manufacturer`, `part_number`, `serial`, `health` |
+| `nics` | per interface: `name`, `mac`, `speed_mbps`, `link_up`, `health` |
 
 ### 5.3 `power`
 
-| Methode | Wirkung |
+| Method | Effect |
 |---|---|
-| `state` | `on` oder `off`; unterwegs nennt der Controller gelegentlich einen Zwischenzustand, der in derselben Form zurückkommt (`powering_on`) |
-| `on` | einschalten |
-| `off` | sanft herunterfahren; `off( force => 1 )` schaltet hart ab |
-| `restart` | sanfter Neustart; `restart( force => 1 )` hart |
-| `cycle` | aus und wieder an |
-| `wait_for( $state, timeout => 120 )` | fragt `state` ab, bis er erreicht ist; gibt wahr zurück, bei Ablauf der Zeit falsch |
+| `state` | `on` or `off`; in transit the controller occasionally names an intermediate state, which comes back in the same form (`powering_on`) |
+| `on` | power on |
+| `off` | graceful shutdown; `off( force => 1 )` cuts power hard |
+| `restart` | graceful restart; `restart( force => 1 )` hard |
+| `cycle` | off and on again |
+| `wait_for( $state, timeout => 120 )` | polls `state` until it is reached; returns true, false when the time runs out |
 | `consumption` | `watts`, `average_watts`, `min_watts`, `max_watts`, `capacity_watts` |
 
-Schaltende Methoden kehren zurück, sobald der iDRAC den Auftrag angenommen hat. Vor dem
-Absenden wird der gewünschte `ResetType` gegen die `AllowableValues` der Action geprüft;
-fehlt er, gibt es `Error::Unsupported`, keinen HTTP-Fehler.
+Switching methods return as soon as the iDRAC has accepted the order. Before
+sending, the requested `ResetType` is checked against the action's `AllowableValues`;
+if it is missing, there is `Error::Unsupported`, not an HTTP error.
 
 ### 5.4 `sensors`
 
-| Methode | Rückgabe je Eintrag |
+| Method | Returns per entry |
 |---|---|
 | `temperatures` | `name`, `celsius`, `upper_warning`, `upper_critical`, `lower_warning`, `lower_critical`, `health` |
 | `fans` | `name`, `reading`, `units`, `health` |
@@ -240,361 +240,361 @@ fehlt er, gibt es `Error::Unsupported`, keinen HTTP-Fehler.
 
 ### 5.5 `logs`
 
-| Methode | Wirkung |
+| Method | Effect |
 |---|---|
-| `sel( limit => 50 )` | System-Event-Log, neueste zuerst |
-| `lifecycle( limit => 50 )` | Lifecycle-Log, neueste zuerst |
-| `clear_sel` | leert das System-Event-Log |
+| `sel( limit => 50 )` | system event log, newest first |
+| `lifecycle( limit => 50 )` | lifecycle log, newest first |
+| `clear_sel` | clears the system event log |
 
-Je Eintrag: `id`, `created`, `severity`, `message`, `message_id`.
+Per entry: `id`, `created`, `severity`, `message`, `message_id`.
 
 ### 5.6 `manager`
 
-| Methode | Wirkung |
+| Method | Effect |
 |---|---|
 | `info` | `model`, `firmware`, `health`, `date_time`, `uuid` |
-| `network` | `hostname`, `fqdn`, `mac`, `ipv4` (Liste), `ipv6` (Liste), `dns` (Liste) |
-| `restart` | startet den iDRAC neu, nicht den Server |
+| `network` | `hostname`, `fqdn`, `mac`, `ipv4` (list), `ipv6` (list), `dns` (list) |
+| `restart` | restarts the iDRAC, not the server |
 
-### 5.7 `bios` (Phase 2, racadm)
+### 5.7 `bios` (phase 2, racadm)
 
-Attribute heißen `Gruppe.Attribut` wie bei racadm (`BiosBootSettings.BootMode`).
+Attributes are named `Group.Attribute` as in racadm (`BiosBootSettings.BootMode`).
 
-| Methode | Rückgabe / Wirkung |
+| Method | Returns / effect |
 |---|---|
-| `groups` | Arrayref der Gruppennamen. Nur wo der Controller sie listet (iDRAC 8); iDRAC 7 antwortet `Unsupported`. |
-| `group($gruppe)` | je Attribut: `name`, `value` (`undef` wenn leer), `read_only` |
-| `get('Gruppe.Attribut')` | der Wert; die gestagete Änderung zählt nicht (ungemessen, s. u.) |
-| `set('Gruppe.Attribut' => $wert)` | stagt; `name`, `value`, `previous`, `fqdd`, `pending`. Liest vorher: schreibgeschützt ist `Validation`, unbekannt `API` mit `is_not_found`, beides vor dem Schreiben. Der Wert geht durch `Racadm->quote_value`: auch ein Wert, der mit `-` beginnt (etwa `-1`), ist `Validation`. |
-| `commit( reboot => 'none' )` | legt den Job an (`jobqueue create <fqdd> -r <reboot> -s TIME_NOW`); `job_id`, `reboot_job_id`, `fqdd`. `reboot`: `none` (Standard), `graceful`, `forced`, `pwrcycle`. Steht in der Antwort keine `JID_…`, wirft `commit` `Error::API` (kein `undef`). |
+| `groups` | Arrayref of the group names. Only where the controller lists them (iDRAC 8); iDRAC 7 answers `Unsupported`. |
+| `group($group)` | per attribute: `name`, `value` (`undef` if empty), `read_only` |
+| `get('Group.Attribute')` | the value; the staged change does not count (unmeasured, see below) |
+| `set('Group.Attribute' => $value)` | stages; `name`, `value`, `previous`, `fqdd`, `pending`. Reads first: read-only is `Validation`, unknown is `API` with `is_not_found`, both before writing. The value goes through `Racadm->quote_value`: a value starting with `-` (such as `-1`) is also `Validation`. |
+| `commit( reboot => 'none' )` | creates the job (`jobqueue create <fqdd> -r <reboot> -s TIME_NOW`); `job_id`, `reboot_job_id`, `fqdd`. `reboot`: `none` (default), `graceful`, `forced`, `pwrcycle`. If the response contains no `JID_…`, `commit` throws `Error::API` (not `undef`). |
 
-Eine Änderung wirkt erst mit Job und Neustart des Servers. Die Dist startet den Server nie
-von sich aus neu. `set` und `commit` sind gegen kein Gerät gelaufen. Ungemessen und hier
-nur angenommen: dass `get` eine gestagete Änderung nicht zeigt, woran `set` ein `pending`
-erkennt (das Wort `pending` in der Antwort) und wo in der Antwort von `jobqueue create` die
-Job-Id steht (die erste `JID_…`, die erste `RID_…`). Auch `-s TIME_NOW` ist ungemessen:
-die Aufnahmen enthalten kein `racadm help`, die Quelle der Option ist ungeklärt.
+A change takes effect only with a job and a restart of the server. The dist never restarts
+the server by itself. `set` and `commit` have not run against any device. Unmeasured and here
+only assumed: that `get` does not show a staged change, how `set` recognizes a `pending`
+(the word `pending` in the response) and where in the response of `jobqueue create` the
+job ID is (the first `JID_…`, the first `RID_…`). `-s TIME_NOW` is unmeasured too:
+the recordings contain no `racadm help`, the source of the option is unclear.
 
-### 5.8 `jobs` (Phase 2, racadm)
+### 5.8 `jobs` (phase 2, racadm)
 
-| Methode | Rückgabe / Wirkung |
+| Method | Returns / effect |
 |---|---|
-| `list` | je Job: `id`, `name`, `status`, `message`, `message_id`, `percent_complete`, `start_time`, `expiration_time`, `finished` |
-| `get($id)` | ein Job, dieselben Schlüssel; unbekannte Jobs sind `API` mit `is_not_found` |
-| `delete($id)` | entfernt den Job; ein laufender wird vom Controller verweigert |
-| `wait( $id, timeout => 600, interval => 5 )` | fragt `get` ab, bis `finished`; gibt den Job zurück, bei Ablauf der Zeit `undef` |
+| `list` | per job: `id`, `name`, `status`, `message`, `message_id`, `percent_complete`, `start_time`, `expiration_time`, `finished` |
+| `get($id)` | one job, the same keys; unknown jobs are `API` with `is_not_found` |
+| `delete($id)` | removes the job; a running one is refused by the controller |
+| `wait( $id, timeout => 600, interval => 5 )` | polls `get` until `finished`; returns the job, `undef` when the time runs out |
 
-`id` ist `JID_…` oder `RID_…`, unverändert vom Controller. `finished` heißt: der Status
-enthält das Wort `completed`, `failed` oder `canceled`/`cancelled` (etwa `Completed with
-Errors`, `Reboot Failed`); ob der Job gelang, steht in `status` und `message`. Gemessen
-ist nur `Completed` (iDRAC 7); die übrigen Status sind ungemessen. `delete` ist gegen kein
-Gerät gelaufen.
+`id` is `JID_…` or `RID_…`, unchanged from the controller. `finished` means: the status
+contains the word `completed`, `failed` or `canceled`/`cancelled` (such as `Completed with
+Errors`, `Reboot Failed`); whether the job succeeded is in `status` and `message`. Only
+`Completed` is measured (iDRAC 7); the other statuses are unmeasured. `delete` has not run
+against any device.
 
-### 5.9 `virtual_media` (Phase 2, racadm)
+### 5.9 `virtual_media` (phase 2, racadm)
 
-| Methode | Rückgabe / Wirkung |
+| Method | Returns / effect |
 |---|---|
-| `status` | `connected`, `share`, `username`, `attach_mode`, `boot_once`, `enabled` (die letzten drei nur mit Lizenz, sonst `undef`) |
-| `connect( location => …, username => …, password => … )` | hängt ein Image ein (`//host/share/a.iso`, `host:/export/a.iso`, `http(s)://…`), gibt den Status zurück; CIFS braucht Benutzer und Passwort |
-| `disconnect` | hängt aus, gibt den Status zurück |
+| `status` | `connected`, `share`, `username`, `attach_mode`, `boot_once`, `enabled` (the last three only with a license, otherwise `undef`) |
+| `connect( location => …, username => …, password => … )` | mounts an image (`//host/share/a.iso`, `host:/export/a.iso`, `http(s)://…`), returns the status; CIFS needs user and password |
+| `disconnect` | unmounts, returns the status |
 
-Das Passwort wird nie zurückgegeben und steht in keiner Meldung. `location`, `username`
-und `password` gehen durch `Racadm->quote_value`; eine URL mit `?` oder `&` passt auf keine
-der erlaubten Formen und wird abgelehnt. `connected` ist wahr, wenn `remoteimage -s`
-`Remote File Share is Enabled` druckt; gemessen ist nur `Disabled`, die Form mit
-eingehängtem Image nicht. `connect` und `disconnect` sind gegen kein Gerät gelaufen.
+The password is never returned and appears in no message. `location`, `username`
+and `password` go through `Racadm->quote_value`; a URL with `?` or `&` fits none
+of the allowed forms and is rejected. `connected` is true if `remoteimage -s`
+prints `Remote File Share is Enabled`; only `Disabled` is measured, not the form with
+a mounted image. `connect` and `disconnect` have not run against any device.
 
-**Das Passwort der Freigabe steht im Kommandostring** (`remoteimage -c -u … -p … -l …`),
-den der SSH-Client als ein Argument an den Controller schickt: Es erscheint in den
-Argumenten des lokalen `ssh`-Prozesses (sichtbar über `ps` oder `/proc` für andere
-Benutzer dieser Maschine) und auf dem Controller. Anders als das Login-Passwort, das über
-das Terminal geht und nie auf einer Kommandozeile steht. Dass der Controller die Lizenz
-*Virtual Media* auch für `remoteimage -c`/`-d` verlangt, ist aus der Ablehnung von
-`get iDRAC.VirtualMedia` (`SWC0242`, `Required License -- Virtual Media`) geschlossen,
-nicht gesehen.
+**The share's password is in the command string** (`remoteimage -c -u … -p … -l …`),
+which the SSH client sends to the controller as one argument: it appears in the
+arguments of the local `ssh` process (visible via `ps` or `/proc` to other
+users of this machine) and on the controller. Unlike the login password, which goes through
+the terminal and never appears on a command line. That the controller also requires the license
+*Virtual Media* for `remoteimage -c`/`-d` is inferred from the rejection of
+`get iDRAC.VirtualMedia` (`SWC0242`, `Required License -- Virtual Media`),
+not seen.
 
-### 5.10 Argumente an racadm
+### 5.10 Arguments to racadm
 
-racadm meldet Fehler als Text mit Exit-Status 0, und was seine Kommandozeile mit einem
-Anführungszeichen, einem Backslash oder Shell-Zeichen macht, ist nicht für jede Firmware
-bekannt. Deshalb besteht jedes Argument aus Buchstaben, Ziffern, Leerzeichen und
-`_ . : / @ = , + % # -`, sonst `Validation` (ohne den Wert in der Meldung); Wörter mit
-Leerzeichen oder `#` kommen in doppelte Anführungszeichen. Folge: ein Passwort mit `"`,
-`\`, `$` und ähnlichem kann nicht gesendet werden. Das ist die ehrliche Grenze, kein
-Escaping auf Verdacht. `Racadm->quote_value` gilt für Wörter an der Stelle eines Werts
-(BIOS-Wert, Freigabe, Benutzer, Passwort) und lehnt zusätzlich ein Wort ab, das mit `-`
-beginnt, weil racadm es als Option läse, auch in Anführungszeichen; ein BIOS-Wert wie `-1`
-kann darum nicht gesetzt werden.
+racadm reports errors as text with exit status 0, and what its command line does with a
+quote, a backslash or shell characters is not known for every firmware.
+Therefore every argument consists of letters, digits, spaces and
+`_ . : / @ = , + % # -`, otherwise `Validation` (without the value in the message); words with
+spaces or `#` go in double quotes. Consequence: a password with `"`,
+`\`, `$` and the like cannot be sent. That is the honest limit, no
+escaping on suspicion. `Racadm->quote_value` applies to words in the position of a value
+(BIOS value, share, user, password) and additionally rejects a word that starts with `-`,
+because racadm would read it as an option, even in quotes; a BIOS value like `-1`
+therefore cannot be set.
 
-### Nicht in Phase 1 und 2
+### Not in phase 1 and 2
 
-Storage/RAID, Firmware-Update, Benutzer, Zertifikate, iDRAC-Konfiguration schreiben
-(außer BIOS), Async, CLI.
+Storage/RAID, firmware update, users, certificates, writing iDRAC configuration
+(except BIOS), async, CLI.
 
-## 6. Fehler
+## 6. Errors
 
-Alle Fehler sind Objekte, stringifizieren zu ihrer Meldung und werden mit `throw`
-geworfen, wie in `WWW::Keycloak`.
+All errors are objects, stringify to their message and are thrown with `throw`,
+as in `WWW::Keycloak`.
 
-| Klasse | Wann | Zusätzlich |
+| Class | When | Additionally |
 |---|---|---|
-| `Error::Validation` | falsche Argumente | |
-| `Error::Network` | keine HTTP-Antwort, TLS-Fehler; über SSH: Verbindung, Host-Key, Login, Zeitablauf | `cause` (nur SSH: `host_key`, `auth`, `refused`, `unreachable`, `timeout`, `other`; aus dem stderr des ssh-Masters bestimmt; nur `refused` wird in den racadm-Klassen zu `Unsupported`) |
-| `Error::API` | iDRAC antwortet mit Fehler; racadm druckt `ERROR:` | `http_status` (bei racadm `undef`), `message_id` (`RAC1019`, `SWC0242` …), `api_message`, `resolution`; `is_not_found`, `is_unauthorized` |
-| `Error::Unsupported` | Fähigkeit fehlt auf diesem Controller | `capability`, `reason` |
+| `Error::Validation` | wrong arguments | |
+| `Error::Network` | no HTTP response, TLS error; over SSH: connection, host key, login, timeout | `cause` (SSH only: `host_key`, `auth`, `refused`, `unreachable`, `timeout`, `other`; determined from the stderr of the ssh master; only `refused` becomes `Unsupported` in the racadm classes) |
+| `Error::API` | iDRAC answers with an error; racadm prints `ERROR:` | `http_status` (`undef` for racadm), `message_id` (`RAC1019`, `SWC0242` …), `api_message`, `resolution`; `is_not_found`, `is_unauthorized` |
+| `Error::Unsupported` | capability is missing on this controller | `capability`, `reason` |
 
-`Error::API` liest Redfishs `error.@Message.ExtendedInfo`: `message_id` ist die
-Dell-Kennung (z. B. `IDRAC.1.6.SYS403`), `resolution` Dells Handlungsvorschlag.
-`Error::Unsupported` werfen nur die Fähigkeits-Klassen: aus der Prüfung vor dem Aufruf
-und wenn eine Ressource, die sie selbst ansteuern, auf diesem Controller mit 404
-antwortet. Der Notausgang `->redfish` übersetzt nichts; dort bleibt eine 404 ein
-`Error::API` mit `is_not_found`.
+`Error::API` reads Redfish's `error.@Message.ExtendedInfo`: `message_id` is the
+Dell identifier (e.g. `IDRAC.1.6.SYS403`), `resolution` Dell's suggested action.
+`Error::Unsupported` is thrown only by the capability classes: from the check before the call
+and when a resource that they address themselves answers with 404 on this controller.
+The escape hatch `->redfish` translates nothing; there a 404 stays an
+`Error::API` with `is_not_found`.
 
-## 7. Zwilling
+## 7. Twin
 
-`Net::Async::iDRAC` folgt, wenn Phase 1 steht. Dafür gilt schon jetzt: `build_request` und
-`read_response` in `Role::HTTP` sind frei von I/O, die Übersetzung von Redfish-Dokumenten
-in normalisierte Daten liegt in reinen Funktionen der Fähigkeits-Klassen, und die
-Fehlerklassen sind über `api_error_class`/`network_error_class` austauschbar. Der Zwilling
-hängt von `WWW-iDRAC` ab und teilt diesen Code, statt ihn zu kopieren. Für racadm gilt
-dasselbe: `command_from`, `quote`, `error_from`, `blocks_from` und die `*_from` von Bios,
-Jobs, VirtualMedia und Capabilities sind frei von I/O; die I/O liegt allein in
-`Racadm::SSH` und ist über das Attribut `runner` austauschbar.
+`Net::Async::iDRAC` follows once phase 1 stands. For that, the following already holds: `build_request` and
+`read_response` in `Role::HTTP` are free of I/O, the translation of Redfish documents
+into normalized data lives in pure functions of the capability classes, and the
+error classes are interchangeable via `api_error_class`/`network_error_class`. The twin
+depends on `WWW-iDRAC` and shares this code instead of copying it. The same holds for
+racadm: `command_from`, `quote`, `error_from`, `blocks_from` and the `*_from` of Bios,
+Jobs, VirtualMedia and Capabilities are free of I/O; the I/O lives solely in
+`Racadm::SSH` and is interchangeable via the `runner` attribute.
 
 ## 8. Tests
 
-- **Unit-Tests** laufen gegen `t/lib/FakeiDRAC.pm`, einen `LWP::UserAgent`-Ersatz, der
-  eine Abbildung von Pfad auf Dokument ausliefert: erfundene Dokumente für die
-  Unit-Tests, und die Aufnahmen `t/fixtures/idrac7/redfish.json` und
-  `t/fixtures/idrac8/redfish.json` für `t/85-fixtures.t`, das jede lesende Methode gegen
-  beide Generationen prüft.
-- **Fixtures** nimmt `t/idrac/record.pl` auf: nur `GET`, läuft den Redfish-Baum ab und
-  ersetzt vor dem Schreiben Service-Tags, Seriennummern, MACs, IPs, Hostnamen, UUIDs und
-  Benutzernamen durch feste Platzhalter. Behalten werden nur die Dokumentarten, die die
-  Tests lesen, ohne Hersteller-Abschnitte (`Oem`) und ohne den Text von Log-Meldungen.
-  Das Repo wird öffentlich; unbereinigte Aufzeichnungen werden nicht committet, und ein
-  Mensch liest jede Aufnahme, bevor sie committet wird. Neben jeder Aufnahme liegt ein
-  `expect.json`, das sagt, was dieser Controller nicht hat.
-- **Live-Suite** `t/90-live-idrac.t` läuft nur mit `IDRAC_HOST`, `IDRAC_USERNAME`,
-  `IDRAC_PASSWORD` (dazu `IDRAC_SSL_FINGERPRINT` oder `IDRAC_VERIFY_SSL=0`) und ist
-  lesend. Schaltende Tests (Power, `clear_sel`, `manager->restart`) brauchen zusätzlich
-  genau `IDRAC_LIVE_DESTRUCTIVE=1`, weil sie eine echte Maschine treffen; den Strom hart
-  abzuschalten braucht darüber hinaus `IDRAC_LIVE_FORCE_OFF=1`.
+- **Unit tests** run against `t/lib/FakeiDRAC.pm`, an `LWP::UserAgent` replacement that
+  serves a mapping from path to document: invented documents for the
+  unit tests, and the recordings `t/fixtures/idrac7/redfish.json` and
+  `t/fixtures/idrac8/redfish.json` for `t/85-fixtures.t`, which checks every reading method against
+  both generations.
+- **Fixtures** are recorded by `t/idrac/record.pl`: `GET` only, walks the Redfish tree and,
+  before writing, replaces service tags, serial numbers, MACs, IPs, hostnames, UUIDs and
+  usernames with fixed placeholders. Only the document types the
+  tests read are kept, without vendor sections (`Oem`) and without the text of log messages.
+  The repo becomes public; unsanitized recordings are not committed, and a
+  human reads every recording before it is committed. Next to each recording lies an
+  `expect.json` that says what this controller does not have.
+- **Live suite** `t/90-live-idrac.t` runs only with `IDRAC_HOST`, `IDRAC_USERNAME`,
+  `IDRAC_PASSWORD` (plus `IDRAC_SSL_FINGERPRINT` or `IDRAC_VERIFY_SSL=0`) and is
+  read-only. Switching tests (power, `clear_sel`, `manager->restart`) additionally need
+  exactly `IDRAC_LIVE_DESTRUCTIVE=1`, because they hit a real machine; cutting power
+  hard additionally needs `IDRAC_LIVE_FORCE_OFF=1`.
 
-- **racadm.** `t/lib/FakeRacadm.pm` ist der Runner der Unit-Tests: erfundene Werte in den
-  Formen, die die Controller am 2026-10-14 druckten, mit etwas Zustand (set, jobqueue
-  create/delete, remoteimage), oder eine Aufnahme `t/fixtures/<name>/racadm.json` (Abbildung
-  Kommandozeile auf Text; ein nicht aufgenommenes Kommando bricht den Test ab).
-  `t/idrac/record-racadm.pl` nimmt auf, nur lesend (`license view`, `get`, `jobqueue view`,
-  `remoteimage -s`), bereinigt mit `t/lib/iDRACSanitizeRacadm.pm` und liest die rohe
-  Ausgabe, damit Fehlertexte in die Aufnahme kommen. `t/85-fixtures.t` prüft die
-  racadm-Methoden gegen beide Aufnahmen; `expect.json` kennt dafür `license`.
-  `t/33-racadm-ssh.t` prüft die I/O-Schicht gegen einen Ersatz für Net::OpenSSH.
-- **Live, racadm.** `t/92-live-racadm.t`: lesend wie die anderen; Schreibendes (BIOS-Wert
-  auf sich selbst setzen, Job anlegen und löschen, Image einhängen) nur mit
-  `IDRAC_LIVE_DESTRUCTIVE=1`, Image zusätzlich mit `IDRAC_LIVE_VMEDIA_LOCATION`.
+- **racadm.** `t/lib/FakeRacadm.pm` is the runner of the unit tests: invented values in the
+  forms the controllers printed on 2026-10-14, with some state (set, jobqueue
+  create/delete, remoteimage), or a recording `t/fixtures/<name>/racadm.json` (mapping
+  command line to text; a command not recorded aborts the test).
+  `t/idrac/record-racadm.pl` records, read-only (`license view`, `get`, `jobqueue view`,
+  `remoteimage -s`), sanitizes with `t/lib/iDRACSanitizeRacadm.pm` and reads the raw
+  output, so error texts get into the recording. `t/85-fixtures.t` checks the
+  racadm methods against both recordings; `expect.json` knows `license` for that.
+  `t/33-racadm-ssh.t` checks the I/O layer against a replacement for Net::OpenSSH.
+- **Live, racadm.** `t/92-live-racadm.t`: read-only like the others; writing (setting a BIOS value
+  to itself, creating and deleting a job, mounting an image) only with
+  `IDRAC_LIVE_DESTRUCTIVE=1`, the image additionally with `IDRAC_LIVE_VMEDIA_LOCATION`.
 
-Abhängigkeiten: `Moo`, `Type::Tiny`, `LWP::UserAgent`, `LWP::Protocol::https`,
+Dependencies: `Moo`, `Type::Tiny`, `LWP::UserAgent`, `LWP::Protocol::https`,
 `IO::Socket::SSL`, `HTTP::Message`, `JSON::MaybeXS`, `namespace::autoclean`, `Net::OpenSSH`
-(geladen erst, wenn racadm benutzt wird) mit `IO::Pty` für die Passwort-Abfrage; für die
-Tests zusätzlich `URI`; Perl 5.020. Zur Laufzeit außerdem das Programm `ssh` von OpenSSH.
+(loaded only when racadm is used) with `IO::Pty` for the password prompt; for the
+tests additionally `URI`; Perl 5.020. At runtime also the `ssh` program from OpenSSH.
 
-## 9. Am Gerät zu klären (Karte 1)
+## 9. To be clarified on the device (card 1)
 
-Diese Punkte sind keine Lücken im Design, sondern Messungen, die das Design an den
-genannten Stellen festlegen. Karte 1 beobachtet beide iDRACs lesend, nimmt die Fixtures
-auf und trägt die Ergebnisse hier ein.
+These points are not gaps in the design, but measurements that pin the design down at the
+places named. Card 1 observes both iDRACs read-only, records the fixtures
+and enters the results here.
 
-| Frage | Folge |
+| Question | Consequence |
 |---|---|
-| Firmware-Stand beider Controller; ist Redfish überhaupt vorhanden? | Zu alte Firmware: Update ist Voraussetzung und Handarbeit, keine Aufgabe der Dist. |
-| Welche TLS-Versionen und Cipher spricht der Controller? | Geht nur TLS 1.0/1.1: wie oben, Firmware-Update; die Dist bekommt keinen unsicheren Standard. |
-| Ist die Lizenzstufe über Redfish lesbar? | Wenn nein, bleibt `license` in Phase 1 `undef` und wird in Phase 2 nachgeliefert. Nein (siehe unten); Phase 2 liefert sie über racadm. |
-| Wie viele Sessions lässt der Controller zu, wie lange leben sie? | Bestätigt oder ändert den Standard `session => 1`. |
-| Wo liegen SEL und Lifecycle-Log, kommen Einträge inline oder einzeln? | Legt die Umsetzung von `logs` und `limit` fest. |
-| Welche Schlüssel aus Abschnitt 5 liefert iDRAC 7/8 tatsächlich? | Schlüssel ohne Quelle bleiben `undef`; fehlende ganze Ressourcen werden `Unsupported`. |
-| WS-Man oder racadm über SSH als zweiter Transport? | **Entschieden am 2026-10-14: racadm über SSH.** Messung und Begründung unten. |
+| Firmware level of both controllers; is Redfish present at all? | Firmware too old: an update is a prerequisite and manual work, not a task of the dist. |
+| Which TLS versions and ciphers does the controller speak? | If only TLS 1.0/1.1 works: as above, firmware update; the dist gets no insecure default. |
+| Is the license tier readable via Redfish? | If not, `license` stays `undef` in phase 1 and is delivered in phase 2. No (see below); phase 2 delivers it via racadm. |
+| How many sessions does the controller allow, how long do they live? | Confirms or changes the default `session => 1`. |
+| Where are the SEL and lifecycle log, do entries come inline or individually? | Determines the implementation of `logs` and `limit`. |
+| Which keys from section 5 do iDRAC 7/8 actually deliver? | Keys without a source stay `undef`; entire missing resources become `Unsupported`. |
+| WS-Man or racadm over SSH as the second transport? | **Decided on 2026-10-14: racadm over SSH.** Measurement and reasoning below. |
 
-### Gemessen am 2026-10-05
+### Measured on 2026-10-05
 
-Beide Geräte wurden rein lesend aufgenommen (`t/idrac/record.pl`), danach lief
-`t/90-live-idrac.t` lesend gegen beide durch. Geschaltet wurde nichts: Beide sind
-Produktivmaschinen.
+Both devices were recorded strictly read-only (`t/idrac/record.pl`), then
+`t/90-live-idrac.t` ran read-only against both. Nothing was switched: both are
+production machines.
 
-| Frage | PowerEdge R720xd (iDRAC 7) | PowerEdge T330 (iDRAC 8) |
+| Question | PowerEdge R720xd (iDRAC 7) | PowerEdge T330 (iDRAC 8) |
 |---|---|---|
 | Firmware, Redfish | 2.65.65.65, Redfish 1.4.0 | 2.50.50.50, Redfish 1.0.2 |
-| Modell des Managers | `12G Monolithic`, als iDRAC 7 erkannt | `13G Monolithic`, als iDRAC 8 erkannt |
+| Manager model | `12G Monolithic`, recognized as iDRAC 7 | `13G Monolithic`, recognized as iDRAC 8 |
 | TLS | TLS 1.2, ECDHE-RSA-AES256-GCM-SHA384 | TLS 1.2, DHE-RSA-AES256-GCM-SHA384 |
-| Service-Root | 200 mit und ohne Schrägstrich, kein Redirect | ebenso |
-| Lizenz über Redfish | kein Lizenz-Dokument im Baum | ebenso |
-| Sessions | `/redfish/v1/Sessions`, Timeout 1800 s | ebenso |
-| Logs | Dienste `SEL` und `LC` unter `LogServices/Sel` und `/Lclog`; Einträge inline, neueste zuerst | ebenso; der Schlüssel heißt hier `MessageID` |
-| Reset-Typen | `On ForceOff ForceRestart GracefulShutdown PushPowerButton Nmi` | `On ForceOff GracefulRestart PushPowerButton Nmi` |
-| Memory-Collection | vorhanden | fehlt |
-| Abgelaufen / behalten | 193 Dokumente in 98 s / 66 | 56 in 38 s / 40 |
-| Nicht erreichbar | `Storage/RAID.Integrated.1-1` (404) | `VirtualMedia` (403) |
+| Service root | 200 with and without trailing slash, no redirect | same |
+| License via Redfish | no license document in the tree | same |
+| Sessions | `/redfish/v1/Sessions`, timeout 1800 s | same |
+| Logs | services `SEL` and `LC` under `LogServices/Sel` and `/Lclog`; entries inline, newest first | same; the key is called `MessageID` here |
+| Reset types | `On ForceOff ForceRestart GracefulShutdown PushPowerButton Nmi` | `On ForceOff GracefulRestart PushPowerButton Nmi` |
+| Memory collection | present | missing |
+| Walked / kept | 193 documents in 98 s / 66 | 56 in 38 s / 40 |
+| Unreachable | `Storage/RAID.Integrated.1-1` (404) | `VirtualMedia` (403) |
 
-Was daraus folgt:
+What follows from this:
 
-- **Das Werkszertifikat** lässt sich mit `ssl_fingerprint` anpinnen; so liefen Aufnahme und
-  Live-Suite. Die Dist braucht keinen abgesenkten TLS-Standard.
-- **`license` blieb in Phase 1 `undef`**; Phase 2 liest sie über racadm (unten).
-- **Session-Login und -Logout funktionieren**; nach den Läufen war auf beiden keine Session
-  offen. Wie viele Sessions ein Controller zulässt, wurde an den Produktivgeräten nicht
-  ausgereizt. Keep-Alive hat über 193 Anfragen gehalten.
-- **Schlüssel, die diese Controller nicht liefern,** stehen je Gerät in
-  `t/fixtures/<name>/expect.json`: `fqdn` des iDRAC (leer), `asset_tag` (nicht gesetzt),
-  `link_up` (kein `LinkStatus`), auf dem R720xd dazu `hostname`, `health` der
-  Netzwerkschnittstellen und `output_watts` der Netzteile.
-- **Drei Annahmen des Codes waren falsch** und sind korrigiert: der Name des
-  Lifecycle-Log-Dienstes (`LC`), die Schreibung `MessageID`, und die Netzteil-Leistung,
-  die der iDRAC 7 nur unter `InputRanges` nennt.
-- **Schalten:** `power->cycle` bietet keines der beiden an. Sanftes `off` fehlt auf dem
-  T330, sanftes `restart` auf dem R720xd. **Offen für Getty:** ob `off` und `restart` dort
-  ersatzweise `PushPowerButton` bzw. die harte Form senden sollen, oder ob `Unsupported`
-  die richtige Antwort bleibt.
-- **Zweiter Transport:** `VirtualMedia` antwortet auf dem T330 mit 403, was auf die
-  Lizenzstufe deutet. Bestätigt am 2026-10-14: der T330 hat eine Express-Lizenz, und
-  racadm nennt für Virtual Media `SWC0242`. Die Entscheidung WS-Man oder racadm: unten.
+- **The factory certificate** can be pinned with `ssl_fingerprint`; that is how the recording and
+  live suite ran. The dist needs no lowered TLS default.
+- **`license` stayed `undef` in phase 1**; phase 2 reads it via racadm (below).
+- **Session login and logout work**; after the runs no session was open on either
+  device. How many sessions a controller allows was not pushed to the limit on the
+  production devices. Keep-alive held over 193 requests.
+- **Keys these controllers do not deliver** are listed per device in
+  `t/fixtures/<name>/expect.json`: `fqdn` of the iDRAC (empty), `asset_tag` (not set),
+  `link_up` (no `LinkStatus`), on the R720xd also `hostname`, `health` of the
+  network interfaces and `output_watts` of the power supplies.
+- **Three assumptions of the code were wrong** and are corrected: the name of the
+  lifecycle log service (`LC`), the spelling `MessageID`, and the power supply output,
+  which the iDRAC 7 names only under `InputRanges`.
+- **Switching:** neither offers `power->cycle`. Graceful `off` is missing on the
+  T330, graceful `restart` on the R720xd. **Open for Getty:** whether `off` and `restart` there
+  should send `PushPowerButton` or the hard form as a substitute, or whether `Unsupported`
+  remains the right answer.
+- **Second transport:** `VirtualMedia` answers with 403 on the T330, which points to the
+  license tier. Confirmed on 2026-10-14: the T330 has an Express license, and
+  racadm names `SWC0242` for virtual media. The decision WS-Man or racadm: below.
 
-### Vermutungen aus dem Review (2026-10-05)
+### Assumptions from the review (2026-10-05)
 
-Stand nach der Messung: Die Reset-Typen stimmen für den T330 und nicht für den R720xd.
-`LinkStatus` fehlt auf beiden, die Memory-Collection auf dem T330. `Thermal` und `Power`
-liefern die Messwerte direkt, der Service-Root antwortet ohne Redirect. Die Zeilen zu 409
-und 503 sind ungeprüft, weil nichts geschaltet wurde.
+State after the measurement: the reset types are right for the T330 and not for the R720xd.
+`LinkStatus` is missing on both, the memory collection on the T330. `Thermal` and `Power`
+deliver the readings directly, the service root answers without a redirect. The rows on 409
+and 503 are unchecked, because nothing was switched.
 
-**Schaltender Lauf am 2026-10-06 gegen den R720xd (iDRAC 7, 2.65), mit Gettys Freigabe.**
-`clear_sel`, sanftes `off`, `on` und `manager->restart` sind durchgelaufen. Gemessen:
+**Switching run on 2026-10-06 against the R720xd (iDRAC 7, 2.65), with Getty's approval.**
+`clear_sel`, graceful `off`, `on` and `manager->restart` ran through. Measured:
 
-- Nach `clear_sel` beantwortet der iDRAC 7 jedes Lesen des Event-Logs etwa eine Minute
-  lang mit 500 („Failed to get SEL count“), solange er löscht; IPMI meldet in der Zeit
-  0x81. Die Live-Suite wartet das jetzt ab.
-- Sanftes `off` war nach rund 35 Sekunden erreicht, `on` sofort; der Controller war nach
-  seinem Neustart nach etwa drei Minuten wieder da.
-- Eine Anmeldung, die der hochfahrende Controller noch annimmt, deren Antwort aber nicht
-  mehr ankommt, bleibt als offene Sitzung auf dem Gerät, bis sie abläuft.
-- Der Server kam danach nicht von selbst hoch: Mit nur einem versorgten Netzteil hält das
-  BIOS beim Kaltstart mit „Power required exceeds PSU wattage … F1 to continue“ an
-  (`ErrPrompt=Enabled`). Das ist Sache der Maschine, nicht der Bibliothek, gehört aber vor
-  jeden schaltenden Lauf geprüft.
+- After `clear_sel` the iDRAC 7 answers every read of the event log with 500 ("Failed to
+  get SEL count") for about a minute while it clears; IPMI reports 0x81 during that time.
+  The live suite now waits for it.
+- Graceful `off` was reached after about 35 seconds, `on` immediately; the controller was
+  back about three minutes after its restart.
+- A login that the booting controller still accepts, but whose response no longer
+  arrives, remains as an open session on the device until it expires.
+- The server did not come up by itself afterwards: with only one powered supply the
+  BIOS stops on cold start with "Power required exceeds PSU wattage … F1 to continue"
+  (`ErrPrompt=Enabled`). That is a matter of the machine, not the library, but belongs
+  checked before every switching run.
 
-Nicht gelaufen: die harten Formen (`off( force => 1 )`, `restart( force => 1 )`) und alles
-Schaltende auf dem iDRAC 8.
+Not run: the hard forms (`off( force => 1 )`, `restart( force => 1 )`) and anything
+switching on the iDRAC 8.
 
-Der Review des gebauten Stands hat aus Dells Dokumentation Vermutungen über iDRAC 7/8 mit
-Firmware 2.x genannt. Sie sind nicht gemessen und nicht umgesetzt; Karte 1 prüft sie an
-den Aufnahmen.
+The review of the built state named assumptions about iDRAC 7/8 with
+firmware 2.x from Dell's documentation. They are not measured and not implemented; card 1 checks them against
+the recordings.
 
-| Vermutung | Wenn sie stimmt |
+| Assumption | If it holds |
 |---|---|
-| Angebotene Reset-Typen sind nur `On`, `ForceOff`, `GracefulRestart`, `PushPowerButton`, `Nmi` | `power->off`, `restart( force => 1 )` und `cycle` sind auf beiden Geräten `Unsupported`. Getty entscheidet, ob `off` dann `PushPowerButton` senden soll, wenn der Server an ist. |
-| `on` oder hartes `off` in einem Zustand, der schon erreicht ist, wird mit 409 beantwortet | Die schaltenden Methoden sollten zurückkehren, ohne zu senden, wenn der Zustand schon stimmt. |
-| `LinkStatus` fehlt an den Netzwerkschnittstellen | `link_up` ist immer `undef`; gehört dann ins `expect.json`. |
-| Die `Memory`-Collection fehlt auf früher 2.x-Firmware | `system->memory` ist `Unsupported`; das ist schon behandelt. |
-| `Thermal` und `Power` enthalten auf früher 2.x-Firmware nur Verweise statt der Messwerte | Die Sensoren kämen als Zeilen mit lauter `undef` zurück; das `expect.json` zeigt es. |
-| Während der iDRAC neu startet, antwortet er auch mit 503 | Anfragen in der Zeit enden dann in `Error::API`, nicht nur in `Error::Network`; das POD von `manager->restart` wäre zu ergänzen. |
-| Der Service-Root `/redfish/v1/` antwortet mit einem Redirect | Der Client folgt keinem Redirect; der Pfad des Service-Root wäre dann anzupassen. |
+| Offered reset types are only `On`, `ForceOff`, `GracefulRestart`, `PushPowerButton`, `Nmi` | `power->off`, `restart( force => 1 )` and `cycle` are `Unsupported` on both devices. Getty decides whether `off` should then send `PushPowerButton` when the server is on. |
+| `on` or hard `off` in a state that is already reached is answered with 409 | The switching methods should return without sending if the state is already right. |
+| `LinkStatus` is missing on the network interfaces | `link_up` is always `undef`; then belongs in `expect.json`. |
+| The `Memory` collection is missing on early 2.x firmware | `system->memory` is `Unsupported`; that is already handled. |
+| `Thermal` and `Power` contain only references instead of the readings on early 2.x firmware | The sensors would come back as rows full of `undef`; `expect.json` shows it. |
+| While the iDRAC restarts, it also answers with 503 | Requests during that time then end in `Error::API`, not only in `Error::Network`; the POD of `manager->restart` would need an addition. |
+| The service root `/redfish/v1/` answers with a redirect | The client follows no redirect; the path of the service root would then need adjusting. |
 
-### Phase 2: zweiter Transport, gemessen am 2026-10-14
+### Phase 2: second transport, measured on 2026-10-14
 
-Beide Controller wurden rein lesend per SSH befragt (nichts gesetzt, angelegt, gelöscht,
-eingehängt; kein Power geschaltet). Zugang: Benutzer und Passwort wie für Redfish, ein
-`ssh` von OpenSSH 10 mit seinen Standard-Algorithmen, Host-Key geprüft gegen einen mit
-`ssh-keyscan` geholten Key (Strict an). **Es waren keine alten Algorithmen nötig.** Die
-Controller bieten `publickey` und `keyboard-interactive`, kein `password`: ein Client, der
-nur `password` versucht, scheitert mit `Permission denied`; Net::OpenSSH beantwortet die
-Passwort-Abfrage des `keyboard-interactive` über sein Terminal. Der Exit-Status von
-`ssh ... racadm ...` ist immer 0, auch bei einem Fehler: Fehler stehen nur im Text.
+Both controllers were queried strictly read-only over SSH (nothing set, created, deleted,
+mounted; no power switched). Access: user and password as for Redfish, an
+`ssh` from OpenSSH 10 with its default algorithms, host key verified against a key fetched with
+`ssh-keyscan` (strict on). **No old algorithms were needed.** The
+controllers offer `publickey` and `keyboard-interactive`, not `password`: a client that
+only tries `password` fails with `Permission denied`; Net::OpenSSH answers the
+password prompt of `keyboard-interactive` via its terminal. The exit status of
+`ssh ... racadm ...` is always 0, even on an error: errors are only in the text.
 
-| Frage | PowerEdge R720xd (iDRAC 7, FW 2.65) | PowerEdge T330 (iDRAC 8, FW 2.50) |
+| Question | PowerEdge R720xd (iDRAC 7, FW 2.65) | PowerEdge T330 (iDRAC 8, FW 2.50) |
 |---|---|---|
-| SSH Port 22, `racadm getversion` | ja | ja |
-| `racadm license view` | Baum mit Tabs; `License Description = iDRAC7 Enterprise License` | `... iDRAC8 Express License` |
-| `racadm get BIOS` (Gruppenliste) | `ERROR: Unable to perform requested operation.` | 13 Gruppennamen, einer je Zeile |
-| `racadm get BIOS.<Gruppe>` | ja, `[Key=BIOS.Setup.1-1#<Gruppe>]`; die Aufnahmen enthalten keinen `#Name=Wert`-Eintrag, dass `#` schreibgeschützt heißt, ist ungemessen | ebenso |
-| `racadm get BIOS.<Gruppe>.<Attr>` | ja, ein Eintrag | ebenso |
-| Unbekannte Gruppe / Attribut | `ERROR: RAC1020` / `ERROR: RAC1019` | ebenso |
-| `racadm jobqueue view` | Kopfzeile, dann `[Job ID=JID_…]`-Blöcke mit `Key=Value`; ein abgeschlossener Job | nur die Kopfzeile (leere Queue) |
-| `racadm jobqueue view -i <id>` | ein Block unter `---- JOB ----` | unbekannte Id: `RAC992: Invalid job` ohne `ERROR:` |
-| `racadm remoteimage -s` | `Remote File Share is Disabled` + `UserName`/`Password`/`ShareName` | ebenso |
+| SSH port 22, `racadm getversion` | yes | yes |
+| `racadm license view` | tree with tabs; `License Description = iDRAC7 Enterprise License` | `... iDRAC8 Express License` |
+| `racadm get BIOS` (group list) | `ERROR: Unable to perform requested operation.` | 13 group names, one per line |
+| `racadm get BIOS.<Group>` | yes, `[Key=BIOS.Setup.1-1#<Group>]`; the recordings contain no `#Name=Value` entry, that `#` means read-only is unmeasured | same |
+| `racadm get BIOS.<Group>.<Attr>` | yes, one entry | same |
+| Unknown group / attribute | `ERROR: RAC1020` / `ERROR: RAC1019` | same |
+| `racadm jobqueue view` | header line, then `[Job ID=JID_…]` blocks with `Key=Value`; one completed job | only the header line (empty queue) |
+| `racadm jobqueue view -i <id>` | one block under `---- JOB ----` | unknown ID: `RAC992: Invalid job` without `ERROR:` |
+| `racadm remoteimage -s` | `Remote File Share is Disabled` + `UserName`/`Password`/`ShareName` | same |
 | `racadm get iDRAC.VirtualMedia` | `Attached`, `BootOnce`, `Enable`, ... | `ERROR: SWC0242 : A required license is missing or expired.` + `Required License -- Virtual Media` |
-| `racadm help remoteimage` / `jobqueue` / `set` | Verwendung und Optionen (`-c -u -p -l`, `-d`, `-s`; `jobqueue create <fqdd> -r none\|pwrcycle\|graceful\|forced`, `delete -i`). Der Code sendet außerdem `-s TIME_NOW` an `jobqueue create` (in `commit`); das steht in dieser Zusammenfassung nicht und ist ungemessen. | ebenso |
+| `racadm help remoteimage` / `jobqueue` / `set` | usage and options (`-c -u -p -l`, `-d`, `-s`; `jobqueue create <fqdd> -r none\|pwrcycle\|graceful\|forced`, `delete -i`). The code additionally sends `-s TIME_NOW` to `jobqueue create` (in `commit`); that is not in this summary and is unmeasured. | same |
 
-**Entscheidung: racadm über SSH.**
+**Decision: racadm over SSH.**
 
-- **Strukturierte Daten ohne XML.** Die Ausgabe ist Key=Value in `[Key=...]`- und
-  `[Job ID=...]`-Blöcken mit festen Namen; ein Parser ist eine Handvoll reiner Funktionen.
-  WS-Man hieße SOAP/XML-Hüllen, Namensräume und Enumerationskontexte, auf dem R720xd und
-  dem T330 gegen zwei Firmware-Stände zu verifizieren, und die Dist hätte `DMTF-WSMan`
-  (2012, verwaist) als einzige Orientierung.
-- **Deckt alles ab, was Phase 2 will.** BIOS lesen und setzen (`get`/`set`), Job-Queue
-  (`jobqueue view/create/delete`), Virtual Media (`remoteimage`), Lizenz (`license view`)
-  gingen auf beiden Geräten oder meldeten die Lizenz als Grund.
-- **Dieselben Zugangsdaten**, kein weiterer Port, keine weitere TLS-Konfiguration.
-- **Kosten:** Die Antworten sind langsam (Sekunden je Kommando; ein Lauf der lesenden
-  Live-Suite 60 bis 100 s), SSH ist ein zweiter Dienst, der am iDRAC angeschaltet sein
-  muss und nur wenige Sessions zulässt, und Fehler sind Text, nicht Status. Das
-  Letzte fängt `Racadm::error_from` (es sucht `ERROR:` oder eine fehlgeschlagene Zeile mit
-Code in der ganzen Antwort, nicht nur in der ersten Zeile), das Zweite beendet die
-Verbindung in `DEMOLISH`, in dem Prozess, der sie geöffnet hat; ein Kindprozess nach
-`fork` lässt die Verbindung des Elternprozesses in Ruhe. Ein Kommando, das mit Status
-ungleich 0 endet, trennt die Verbindung nicht; seine Ausgabe geht durch `error_from`.
+- **Structured data without XML.** The output is Key=Value in `[Key=...]` and
+  `[Job ID=...]` blocks with fixed names; a parser is a handful of pure functions.
+  WS-Man would mean SOAP/XML envelopes, namespaces and enumeration contexts, to be verified on the R720xd and
+  the T330 against two firmware levels, and the dist would have `DMTF-WSMan`
+  (2012, abandoned) as its only orientation.
+- **Covers everything phase 2 wants.** Reading and setting BIOS (`get`/`set`), job queue
+  (`jobqueue view/create/delete`), virtual media (`remoteimage`), license (`license view`)
+  worked on both devices or reported the license as the reason.
+- **The same credentials**, no further port, no further TLS configuration.
+- **Costs:** the responses are slow (seconds per command; one run of the read-only
+  live suite 60 to 100 s), SSH is a second service that must be switched on on the iDRAC
+  and allows only a few sessions, and errors are text, not status. The
+  last is caught by `Racadm::error_from` (it searches for `ERROR:` or a failed line with
+code in the whole response, not only in the first line), the second is handled by closing the
+connection in `DEMOLISH`, in the process that opened it; a child process after
+`fork` leaves the parent process's connection alone. A command that ends with a status
+other than 0 does not drop the connection; its output goes through `error_from`.
 
-**SSH-Bibliothek: Net::OpenSSH.** Installiert, reines Perl, und es steuert das `ssh` der
-Maschine: Algorithmen, Host-Key-Prüfung (`known_hosts`, `StrictHostKeyChecking`) und
-`ssh_config` sind die des gepflegten OpenSSH, nicht eine Nachbildung. Es beantwortet die
-Passwort-Abfrage über ein Terminal (`IO::Pty`), also nie auf einer Kommandozeile. Das
-gilt für das Login-Passwort; das Passwort einer Freigabe (`virtual_media->connect`) steht
-im Kommandostring (Abschnitt 5.9).
-`Net::SSH2` (libssh2) ist hier nicht installiert und braucht eine C-Bibliothek,
-`Rex::LibSSH` ist auf Rex zugeschnitten. Nachteil: ein `ssh`-Programm ist Laufzeit-Voraussetzung.
+**SSH library: Net::OpenSSH.** Installed, pure Perl, and it drives the machine's
+`ssh`: algorithms, host key verification (`known_hosts`, `StrictHostKeyChecking`) and
+`ssh_config` are those of the maintained OpenSSH, not an imitation. It answers the
+password prompt via a terminal (`IO::Pty`), so never on a command line. That
+applies to the login password; the password of a share (`virtual_media->connect`) is
+in the command string (section 5.9).
+`Net::SSH2` (libssh2) is not installed here and needs a C library,
+`Rex::LibSSH` is tailored to Rex. Downside: an `ssh` program is a runtime prerequisite.
 
-**Host-Key.** Strict an. `ssh_host_key` pinnt einen Key (die Dist schreibt eine temporäre
-`known_hosts` nur mit ihm), `ssh_known_hosts` nennt eine Datei, die allein gilt (die globale `known_hosts` wird
-ignoriert), sonst gelten die Standarddateien des SSH-Clients; `ssh_verify_host_key => 0` ist die ausdrückliche Entscheidung des Aufrufers
-und nicht zusammen mit den beiden anderen erlaubt. Ein Login-Versuch je Verbindung
-(`NumberOfPasswordPrompts=1`), damit ein falsches Passwort den Controller nicht mehrfach
-anläuft.
+**Host key.** Strict on. `ssh_host_key` pins a key (the dist writes a temporary
+`known_hosts` with only it), `ssh_known_hosts` names a file that alone applies (the global `known_hosts` is
+ignored), otherwise the SSH client's default files apply; `ssh_verify_host_key => 0` is the explicit decision of the caller
+and not allowed together with the other two. One login attempt per connection
+(`NumberOfPasswordPrompts=1`), so a wrong password does not hit the controller
+multiple times.
 
-**Nicht gemessen** (nicht gelaufen, nur aus `racadm help` der beiden Controller und
-den Antwortformen abgeleitet): `racadm set BIOS...`, `jobqueue create`, `jobqueue delete`,
-`remoteimage -c`/`-d`, die Form von `remoteimage -s` mit eingehängtem Image, die Antwort
-auf `set` und `jobqueue create` (die Dist sucht darin `pending`, `JID_…`, `RID_…`), Jobs
-im Zustand `Running`/`Scheduled` und überhaupt alle Job-Status außer `Completed`
-(`Completed with Errors`, `Failed`, `Reboot Failed`, abgebrochen sind angenommen), mehrere
-Lizenzen, und alles Schreibende auf dem iDRAC 8. Ebenfalls nicht gesehen: dass `get` ein
-gestagetes BIOS-Attribut nicht zeigt, woran `set` ein `pending` erkennt, wo `commit` die
-Job-Id findet (ohne `JID_…` wirft `commit` `Error::API`), die Form von `remoteimage -s` mit
-Image (`connected` ist wahr bei `Remote File Share is Enabled`), das `#`-Zeichen für
-schreibgeschützte Attribute (die Aufnahmen haben keins), und dass `remoteimage -c`/`-d`
-die Lizenz *Virtual Media* brauchen: Das ist aus der Ablehnung von `get
-iDRAC.VirtualMedia` (`SWC0242`) geschlossen, nicht gesehen. Die Texte, mit denen der
-SSH-Client Fehler meldet, wurden nur gegen einen geschlossenen lokalen Port und einen
-nicht auflösbaren Namen geprüft (`cause` `refused`, `unreachable`), nicht gegen einen
-iDRAC; `host_key`, `auth`, `timeout` und die übrigen Muster sind nicht an einem
-Controller gesehen. `racadm get BIOS` auf dem iDRAC 7 (kein Gruppenverzeichnis) ist gemessen und
-`bios.groups` dort `Unsupported`. Wie der racadm-Parser der Controller Anführungszeichen
-und Backslashes behandelt, ist nicht gemessen; deshalb lässt die Dist solche Zeichen in
-Argumenten nicht zu (Abschnitt 5.10).
+**Not measured** (not run, only derived from `racadm help` of both controllers and
+the response forms): `racadm set BIOS...`, `jobqueue create`, `jobqueue delete`,
+`remoteimage -c`/`-d`, the form of `remoteimage -s` with a mounted image, the response
+to `set` and `jobqueue create` (the dist searches it for `pending`, `JID_…`, `RID_…`), jobs
+in state `Running`/`Scheduled` and in general all job statuses except `Completed`
+(`Completed with Errors`, `Failed`, `Reboot Failed`, cancelled are assumed), several
+licenses, and anything writing on the iDRAC 8. Also not seen: that `get` does not show a
+staged BIOS attribute, how `set` recognizes a `pending`, where `commit` finds the
+job ID (without `JID_…` `commit` throws `Error::API`), the form of `remoteimage -s` with
+an image (`connected` is true on `Remote File Share is Enabled`), the `#` character for
+read-only attributes (the recordings have none), and that `remoteimage -c`/`-d`
+need the license *Virtual Media*: that is inferred from the rejection of `get
+iDRAC.VirtualMedia` (`SWC0242`), not seen. The texts with which the
+SSH client reports errors were only checked against a closed local port and a
+name that does not resolve (`cause` `refused`, `unreachable`), not against an
+iDRAC; `host_key`, `auth`, `timeout` and the other patterns have not been seen on a
+controller. `racadm get BIOS` on the iDRAC 7 (no group directory) is measured and
+`bios.groups` there is `Unsupported`. How the controllers' racadm parser handles quotes
+and backslashes is not measured; therefore the dist does not allow such characters in
+arguments (section 5.10).
 
-## 10. Phasen
+## 10. Phases
 
-1. **Anlage.** Dist-Gerüst, Agenten-Team und Board (Abschnitt 11), noch ohne Code.
-2. **Karte 1 – beobachten.** Beide iDRACs lesend abfragen, Fixtures aufnehmen, Abschnitt 9
-   beantworten, Spec nachschärfen. Der Recorder braucht den Transport; deshalb entstehen
-   Fehlerklassen, HTTP-Rolle und Redfish-Transport hier, vor dem Beobachten.
-3. **Phase 1 – bauen.** Fassade, `capabilities` und die fünf Fähigkeits-Klassen aus
-   Abschnitt 5, Unit-Tests, Fixture-Test über beide Aufnahmen, Live-Suite.
-4. **Phase 2 – Lücken auf iDRAC 7/8. Gebaut am 2026-10-14.** Zweiter Transport (racadm
-   über SSH, Abschnitt 9), Transport-Abstraktion (`Role::Transport`, `Role::Area`),
-   `Racadm`/`Racadm::SSH`, die Fähigkeiten `bios`, `jobs`, `virtual_media` und die
-   Lizenz in `capabilities`, Unit-Tests gegen `FakeRacadm`, Aufnahmen
-   `racadm.json` je Generation, lesende Live-Suite `t/92-live-racadm.t`. Gegen beide
-   Geräte lesend gelaufen; Schreibendes (`set`, `commit`, `jobs->delete`,
-   `virtual_media->connect`/`disconnect`) ist in der Live-Suite hinter
-   `IDRAC_LIVE_DESTRUCTIVE=1` und gegen kein Gerät gelaufen.
+1. **Setup.** Dist scaffold, agent team and board (section 11), still without code.
+2. **Card 1 – observe.** Query both iDRACs read-only, record fixtures, answer section 9,
+   sharpen the spec. The recorder needs the transport; therefore error classes,
+   HTTP role and Redfish transport come into being here, before observing.
+3. **Phase 1 – build.** Facade, `capabilities` and the five capability classes from
+   section 5, unit tests, fixture test over both recordings, live suite.
+4. **Phase 2 – gaps on iDRAC 7/8. Built on 2026-10-14.** Second transport (racadm
+   over SSH, section 9), transport abstraction (`Role::Transport`, `Role::Area`),
+   `Racadm`/`Racadm::SSH`, the capabilities `bios`, `jobs`, `virtual_media` and the
+   license in `capabilities`, unit tests against `FakeRacadm`, recordings
+   `racadm.json` per generation, read-only live suite `t/92-live-racadm.t`. Run read-only against both
+   devices; writing (`set`, `commit`, `jobs->delete`,
+   `virtual_media->connect`/`disconnect`) is behind
+   `IDRAC_LIVE_DESTRUCTIVE=1` in the live suite and has not run against any device.
 5. **`Net::Async::iDRAC`.**
-6. **Phase 3 – iDRAC 9/10.** Dell-OEM-Actions, Storage, Firmware-Update; erst mit einem
-   solchen Gerät im Zugriff.
+6. **Phase 3 – iDRAC 9/10.** Dell OEM actions, storage, firmware update; only with such a
+   device in reach.
