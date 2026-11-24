@@ -62,7 +62,7 @@ and hazards are in `.claude/rules/www-idrac-rules.md`.
 | Commits, `Changes`, card → done, pre-release audit | `www-idrac-release-manager` |
 | Write/maintain POD | `www-idrac-doc-writer` |
 
-The agents carry their skills via `briefing.skills` (see `.claude/agents/`); the main
+The agents carry their skills via `skills:` (see `.claude/agents/`); the main
 agent delegates rather than loading them. Skill sources live under `.claude/skills/`.
 
 ## Commands
